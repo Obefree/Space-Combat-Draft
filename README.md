@@ -1,11 +1,11 @@
 # Space Combat Draft
 
-Hot-seat prototype for a space 4X combat system based on the Dice Draft draft-and-dice idea.
+Hot-seat prototype for a space 4X combat system based on the Dice Draft dice-combat idea.
 
 ## Current Combat Model
 
-- Each player drafts cards from open packs.
-- Each player chooses 5 cards for the battle hand.
+- Each player has a symmetric balanced 10-card deck.
+- Before battle, each player randomly draws 5 cards from their own deck.
 - Battle starts with 3 ships per player.
 - The remaining 2 cards stay in hand and are added later as reinforcements.
 - Dice are not taken from one shared table pool.

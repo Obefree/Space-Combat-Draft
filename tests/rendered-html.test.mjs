@@ -31,9 +31,10 @@ test("server-renders the Space Combat Draft shell", async () => {
   const html = await response.text();
   assert.match(html, /<title>Space Combat Draft — боевой прототип<\/title>/);
   assert.match(html, /Космическая боевая система/);
-  assert.match(html, /5 карт в боевой руке/);
+  assert.match(html, /10 карт в колоде/);
+  assert.match(html, /случайно берутся 5/);
   assert.match(html, /3 корабля на старте/);
-  assert.match(html, /отдельный общий пул кубов у каждого игрока/);
+  assert.match(html, /общий пул кубов у каждого игрока/);
 });
 
 test("keeps the space combat rules encoded in source", async () => {
@@ -42,12 +43,19 @@ test("keeps the space combat rules encoded in source", async () => {
     "utf8",
   );
 
+  assert.match(source, /const PLAYER_DECK_SIZE = 10;/);
   assert.match(source, /const OPENING_CARDS_PER_PLAYER = 3;/);
   assert.match(source, /const RESERVE_CARDS_PER_PLAYER = 2;/);
   assert.match(source, /const BATTLE_DECK_SIZE = OPENING_CARDS_PER_PLAYER \+ RESERVE_CARDS_PER_PLAYER;/);
+  assert.match(source, /const SYMMETRIC_DECK_CARD_IDS = \[/);
+  assert.match(source, /function makeRandomBattle\(cards: CardData\[\], seedText: string\): GameState/);
+  assert.match(source, /deck: deckA\.slice\(0, BATTLE_DECK_SIZE\)/);
+  assert.match(source, /deck: deckB\.slice\(0, BATTLE_DECK_SIZE\)/);
   assert.match(source, /pools: Record<PlayerId, Die\[]>;/);
   assert.match(source, /deployOneCreature\(nextState, playerId, card, pools\)/);
   assert.doesNotMatch(source, /needsDie:\s*true/);
+  assert.doesNotMatch(source, /type Phase = "loading" \| "draft"/);
+  assert.doesNotMatch(source, /deck_select/);
   assert.doesNotMatch(source, /selectedIds\.length !== 8/);
   assert.doesNotMatch(source, /личные кубы на каждой карте/);
 });

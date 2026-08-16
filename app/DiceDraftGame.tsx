@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 type PlayerId = "A" | "B";
-type Phase = "loading" | "draft" | "deck_select" | "battle" | "finished";
+type Phase = "loading" | "battle" | "finished";
 type RulesMode = "full" | "light";
 type DieType = "attack" | "defense" | "magic";
 
@@ -66,17 +66,10 @@ type Creature = {
 type Player = {
   id: PlayerId;
   name: string;
-  drafted: CardData[];
+  roster: CardData[];
   deck: CardData[];
   creatures: Creature[];
   nextDeckIndex: number;
-};
-
-type DraftState = {
-  packIndex: number;
-  pickIndex: number;
-  pack: CardData[];
-  packs: CardData[][];
 };
 
 type BattleState = {
@@ -95,19 +88,30 @@ type GameState = {
   rng: number;
   allCards: CardData[];
   players: Record<PlayerId, Player>;
-  draft: DraftState | null;
-  selecting: PlayerId;
-  selectedForDeck: Record<PlayerId, string[]>;
   battle: BattleState | null;
   nextCreatureNumber: number;
   nextDieNumber: number;
 };
 
 const DIE_FACE_VALUES = [1, 1, 2, 2, 3, 3];
+const PLAYER_DECK_SIZE = 10;
 const OPENING_CARDS_PER_PLAYER = 3;
 const RESERVE_CARDS_PER_PLAYER = 2;
 const BATTLE_DECK_SIZE = OPENING_CARDS_PER_PLAYER + RESERVE_CARDS_PER_PLAYER;
 const DEFAULT_SEED_TEXT = "playtest-01";
+
+const SYMMETRIC_DECK_CARD_IDS = [
+  "swift_blade",
+  "raider",
+  "huntress",
+  "mercenary_captain",
+  "bastion",
+  "bodyguard",
+  "paladin",
+  "alchemist",
+  "transmuter",
+  "old_veteran",
+];
 
 const DIE_META: Record<DieType, { icon: string; label: string }> = {
   attack: { icon: "⚔", label: "Атака" },
@@ -124,7 +128,7 @@ const EMPTY_PLAYERS: Record<PlayerId, Player> = {
   A: {
     id: "A",
     name: PLAYERS.A.name,
-    drafted: [],
+    roster: [],
     deck: [],
     creatures: [],
     nextDeckIndex: 0,
@@ -132,7 +136,7 @@ const EMPTY_PLAYERS: Record<PlayerId, Player> = {
   B: {
     id: "B",
     name: PLAYERS.B.name,
-    drafted: [],
+    roster: [],
     deck: [],
     creatures: [],
     nextDeckIndex: 0,
@@ -169,12 +173,6 @@ function shuffleWithSeed<T>(items: T[], seed: number): [T[], number] {
   return [copy, rng];
 }
 
-function currentPicker(draft: DraftState): PlayerId {
-  const orderA: PlayerId[] = ["A", "B", "B", "A"];
-  const orderB: PlayerId[] = ["B", "A", "A", "B"];
-  return (draft.packIndex % 2 === 0 ? orderA : orderB)[draft.pickIndex];
-}
-
 function initialState(): GameState {
   return {
     phase: "loading",
@@ -182,9 +180,6 @@ function initialState(): GameState {
     rng: hashSeed(DEFAULT_SEED_TEXT),
     allCards: [],
     players: structuredClone(EMPTY_PLAYERS),
-    draft: null,
-    selecting: "A",
-    selectedForDeck: { A: [], B: [] },
     battle: null,
     nextCreatureNumber: 1,
     nextDieNumber: 1,
@@ -205,25 +200,43 @@ function readStoredGameScale() {
   return Number.isFinite(parsedScale) ? Math.min(110, Math.max(70, parsedScale)) : 85;
 }
 
-function makeDraft(cards: CardData[], seedText: string): GameState {
-  const [shuffled, rng] = shuffleWithSeed(cards, hashSeed(seedText));
-  const packs = Array.from({ length: 5 }, (_, packIndex) =>
-    shuffled.slice(packIndex * 4, packIndex * 4 + 4),
-  );
+function buildSymmetricDeck(cards: CardData[]) {
+  const byId = new Map(cards.map((card) => [card.id, card]));
+  const selectedDeck = SYMMETRIC_DECK_CARD_IDS.flatMap((id) => {
+    const card = byId.get(id);
+    return card ? [card] : [];
+  });
 
-  return {
-    ...initialState(),
-    phase: "draft",
-    seedText,
-    rng,
-    allCards: cards,
-    draft: {
-      packIndex: 0,
-      pickIndex: 0,
-      pack: packs[0],
-      packs,
-    },
+  return selectedDeck.length === PLAYER_DECK_SIZE
+    ? selectedDeck
+    : cards.slice(0, PLAYER_DECK_SIZE);
+}
+
+function makeRandomBattle(cards: CardData[], seedText: string): GameState {
+  const baseDeck = buildSymmetricDeck(cards);
+  const [deckA, rngAfterA] = shuffleWithSeed(baseDeck, hashSeed(seedText));
+  const [deckB, rngAfterB] = shuffleWithSeed(baseDeck, rngAfterA);
+  const players = structuredClone(EMPTY_PLAYERS);
+
+  players.A = {
+    ...players.A,
+    roster: baseDeck,
+    deck: deckA.slice(0, BATTLE_DECK_SIZE),
   };
+  players.B = {
+    ...players.B,
+    roster: baseDeck,
+    deck: deckB.slice(0, BATTLE_DECK_SIZE),
+  };
+
+  return startBattle({
+    ...initialState(),
+    phase: "battle",
+    seedText,
+    rng: rngAfterB,
+    allCards: cards,
+    players,
+  });
 }
 
 function sortInitiative(creatures: Creature[]) {
@@ -287,7 +300,7 @@ function clonePlayers(players: Record<PlayerId, Player>): Record<PlayerId, Playe
   return {
     A: {
       ...players.A,
-      drafted: [...players.A.drafted],
+      roster: [...players.A.roster],
       deck: [...players.A.deck],
       creatures: players.A.creatures.map((creature) => ({
         ...creature,
@@ -296,7 +309,7 @@ function clonePlayers(players: Record<PlayerId, Player>): Record<PlayerId, Playe
     },
     B: {
       ...players.B,
-      drafted: [...players.B.drafted],
+      roster: [...players.B.roster],
       deck: [...players.B.deck],
       creatures: players.B.creatures.map((creature) => ({
         ...creature,
@@ -1136,41 +1149,6 @@ function CardFrame({
   );
 }
 
-function Card({
-  card,
-  owner,
-  selected,
-  compact,
-  onClick,
-}: {
-  card: CardData;
-  owner?: PlayerId;
-  selected?: boolean;
-  compact?: boolean;
-  onClick?: () => void;
-}) {
-  const flavor = dominantDie(card);
-  return (
-    <button
-      className={`card ${flavor} ${selected ? "selected" : ""} ${compact ? "compact" : ""}`}
-      onClick={onClick}
-      type="button"
-    >
-      <CardFrame card={card} compact={compact} hpText={`${card.health}`} owner={owner}>
-        {card.abilities.map((ability) => (
-          <p key={ability.id}>
-            <span className="abilityLineHead">
-              <b>{ability.name_ru}</b>
-              <AbilityImpact ability={ability} />
-            </span>
-            <span className="abilityRule">{ability.text_ru}</span>
-          </p>
-        ))}
-      </CardFrame>
-    </button>
-  );
-}
-
 function CreatureCard({
   creature,
   active,
@@ -1283,16 +1261,17 @@ function RulesGuide() {
           <article>
             <h3>Быстрый старт</h3>
             <ol>
-              <li>Нажми “сразу бой”, если хочешь быстро протестировать.</li>
+              <li>Нажми “новая битва”, чтобы получить новую случайную руку из 5 карт.</li>
               <li>Для простой партии включи Light mode.</li>
-              <li>Для полного теста начни “новая draft”.</li>
+              <li>Меняй seed, чтобы повторять или сравнивать конкретную раздачу.</li>
             </ol>
           </article>
           <article>
-            <h3>Драфт</h3>
+            <h3>Колоды</h3>
             <p>
-              Игроки выбирают карты из открытых паков по очереди. После драфта каждый
-              выбирает 5 карт в боевую руку: 3 стартуют на поле, 2 остаются резервом.
+              У каждого игрока одинаковая сбалансированная колода из 10 карт. Перед боем
+              каждая колода отдельно перемешивается, и из неё случайно берутся 5 карт:
+              3 стартуют на поле, 2 остаются резервом.
             </p>
           </article>
           <article>
@@ -1376,7 +1355,7 @@ export function SpaceCombatGame() {
       .then((data: { cards: CardData[] }) => {
         if (cancelled) return;
         setFullCards(data.cards);
-        setState(makeDraft(cardsForRulesMode(data.cards, initialRulesMode), DEFAULT_SEED_TEXT));
+        setState(makeRandomBattle(cardsForRulesMode(data.cards, initialRulesMode), DEFAULT_SEED_TEXT));
       });
     return () => {
       cancelled = true;
@@ -1408,39 +1387,12 @@ export function SpaceCombatGame() {
     if (!cardsLoaded) return;
     setArmedAbilityId(null);
     setDraggedAbilityId(null);
-    setState(makeDraft(cardsForRulesMode(fullCards, rulesMode), seedText));
+    setState(makeRandomBattle(cardsForRulesMode(fullCards, rulesMode), seedText));
     setSeedInput(seedText);
   }
 
   function startRandomBattle(seedText = seedInput) {
-    if (!cardsLoaded) return;
-    const cards = cardsForRulesMode(fullCards, rulesMode);
-    const [shuffledCards, rng] = shuffleWithSeed(cards, hashSeed(seedText));
-    const players = structuredClone(EMPTY_PLAYERS);
-    players.A = {
-      ...players.A,
-      drafted: shuffledCards.slice(0, BATTLE_DECK_SIZE),
-      deck: shuffledCards.slice(0, BATTLE_DECK_SIZE),
-    };
-    players.B = {
-      ...players.B,
-      drafted: shuffledCards.slice(BATTLE_DECK_SIZE, BATTLE_DECK_SIZE * 2),
-      deck: shuffledCards.slice(BATTLE_DECK_SIZE, BATTLE_DECK_SIZE * 2),
-    };
-
-    setArmedAbilityId(null);
-    setDraggedAbilityId(null);
-    setSeedInput(seedText);
-    setState(
-      startBattle({
-        ...initialState(),
-        phase: "battle",
-        seedText,
-        rng,
-        allCards: cards,
-        players,
-      }),
-    );
+    restart(seedText);
   }
 
   function switchRulesMode(nextMode: RulesMode) {
@@ -1449,92 +1401,7 @@ export function SpaceCombatGame() {
     setRulesMode(nextMode);
     setArmedAbilityId(null);
     setDraggedAbilityId(null);
-    setState(makeDraft(cards, seedInput));
-  }
-
-  function pickCard(card: CardData) {
-    if (!state.draft) return;
-    const picker = currentPicker(state.draft);
-    const players = clonePlayers(state.players);
-    players[picker].drafted.push(card);
-
-    const nextPack = state.draft.pack.filter((packCard) => packCard.id !== card.id);
-    const nextPickIndex = state.draft.pickIndex + 1;
-    if (nextPickIndex >= 4) {
-      const nextPackIndex = state.draft.packIndex + 1;
-      if (nextPackIndex >= state.draft.packs.length) {
-        setState({
-          ...state,
-          phase: "deck_select",
-          players,
-          draft: null,
-          selecting: "A",
-          selectedForDeck: { A: [], B: [] },
-        });
-        return;
-      }
-      setState({
-        ...state,
-        players,
-        draft: {
-          ...state.draft,
-          packIndex: nextPackIndex,
-          pickIndex: 0,
-          pack: state.draft.packs[nextPackIndex],
-        },
-      });
-      return;
-    }
-
-    setState({
-      ...state,
-      players,
-      draft: {
-        ...state.draft,
-        pickIndex: nextPickIndex,
-        pack: nextPack,
-      },
-    });
-  }
-
-  function toggleDeckCard(playerId: PlayerId, cardId: string) {
-    const selected = state.selectedForDeck[playerId];
-    const nextSelected = selected.includes(cardId)
-      ? selected.filter((id) => id !== cardId)
-      : selected.length < BATTLE_DECK_SIZE
-        ? [...selected, cardId]
-        : selected;
-    setState({
-      ...state,
-      selectedForDeck: {
-        ...state.selectedForDeck,
-        [playerId]: nextSelected,
-      },
-    });
-  }
-
-  function confirmDeck(playerId: PlayerId) {
-    const selectedIds = state.selectedForDeck[playerId];
-    if (selectedIds.length !== BATTLE_DECK_SIZE) return;
-    const selectedCards = state.players[playerId].drafted.filter((card) =>
-      selectedIds.includes(card.id),
-    );
-    const [deck, rng] = shuffleWithSeed(selectedCards, state.rng);
-    const players = clonePlayers(state.players);
-    players[playerId] = { ...players[playerId], deck };
-
-    const nextState = {
-      ...state,
-      rng,
-      players,
-      selecting: playerId === "A" ? ("B" as PlayerId) : ("A" as PlayerId),
-    };
-
-    if (playerId === "B") {
-      setState(startBattle(nextState));
-    } else {
-      setState(nextState);
-    }
+    setState(makeRandomBattle(cards, seedInput));
   }
 
   function activateAbilityOnCreature(creatureId: string) {
@@ -1578,9 +1445,6 @@ export function SpaceCombatGame() {
     );
   }
 
-  const currentDraftPicker = state.draft ? currentPicker(state.draft) : null;
-  const selectedPlayer = state.players[state.selecting];
-  const selectedIds = state.selectedForDeck[state.selecting];
   return (
     <main
       className={`shell ${
@@ -1591,12 +1455,13 @@ export function SpaceCombatGame() {
       <section className="hero">
         <div>
           <p className="eyebrow">
-            Space Combat Draft · v0.1 · 36 карт · {rulesMode === "light" ? "Light" : "Full"}
+            Space Combat Draft · v0.1 · 10 карт в колоде · {rulesMode === "light" ? "Light" : "Full"}
           </p>
           <h1>Космическая боевая система</h1>
           <p>
-            Альтернативный тест для космической 4X: открытый draft 1–2–1, 5 карт в боевой руке,
-            3 корабля на старте, 2 подкрепления позже и отдельный общий пул кубов у каждого игрока.
+            Альтернативный тест для космической 4X: у каждого игрока симметричная колода из 10 карт,
+            перед боем случайно берутся 5, 3 корабля стартуют сразу, 2 приходят позже, а кубы идут
+            в общий пул своего игрока.
           </p>
         </div>
         <div className="seedBox">
@@ -1608,7 +1473,7 @@ export function SpaceCombatGame() {
               onChange={(event) => setSeedInput(event.target.value)}
             />
             <button type="button" onClick={() => restart(seedInput)}>
-              новая draft
+              новая битва
             </button>
             <button
               type="button"
@@ -1616,7 +1481,7 @@ export function SpaceCombatGame() {
               disabled={!cardsLoaded}
               onClick={() => startRandomBattle(seedInput)}
             >
-              сразу бой
+              пересдать 5
             </button>
             <button
               type="button"
@@ -1653,63 +1518,16 @@ export function SpaceCombatGame() {
       <section className="scoreBar">
         <div>
           <span>{PLAYERS.A.name}</span>
-          <strong>{state.players.A.drafted.length} draft · ★{score(state.players.A)}</strong>
+          <strong>{state.players.A.roster.length} в колоде · {state.players.A.deck.length} в бою · ★{score(state.players.A)}</strong>
         </div>
         <div>
           <span>{PLAYERS.B.name}</span>
-          <strong>{state.players.B.drafted.length} draft · ★{score(state.players.B)}</strong>
+          <strong>{state.players.B.roster.length} в колоде · {state.players.B.deck.length} в бою · ★{score(state.players.B)}</strong>
         </div>
       </section>
 
       {state.phase === "loading" ? (
         <section className="panel">Загружаю карты…</section>
-      ) : null}
-
-      {state.phase === "draft" && state.draft ? (
-        <section className="panel">
-          <div className="phaseHead">
-            <div>
-              <p className="eyebrow">Draft · pack {state.draft.packIndex + 1}/5</p>
-              <h2>Выбирает {PLAYERS[currentDraftPicker ?? "A"].name}</h2>
-            </div>
-            <span className="pill">порядок {state.draft.packIndex % 2 === 0 ? "A → B → B → A" : "B → A → A → B"}</span>
-          </div>
-          <div className="cardGrid">
-            {state.draft.pack.map((card) => (
-              <Card card={card} key={card.id} onClick={() => pickCard(card)} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {state.phase === "deck_select" ? (
-        <section className="panel">
-          <div className="phaseHead">
-            <div>
-              <p className="eyebrow">Выбор колоды</p>
-              <h2>
-                {selectedPlayer.name}: выбери {BATTLE_DECK_SIZE} из 10 · {selectedIds.length}/{BATTLE_DECK_SIZE}
-              </h2>
-            </div>
-            <button
-              type="button"
-              disabled={selectedIds.length !== BATTLE_DECK_SIZE}
-              onClick={() => confirmDeck(state.selecting)}
-            >
-              подтвердить
-            </button>
-          </div>
-          <div className="cardGrid">
-            {selectedPlayer.drafted.map((card) => (
-              <Card
-                card={card}
-                key={card.id}
-                selected={selectedIds.includes(card.id)}
-                onClick={() => toggleDeckCard(state.selecting, card.id)}
-              />
-            ))}
-          </div>
-        </section>
       ) : null}
 
       {(state.phase === "battle" || state.phase === "finished") && state.battle ? (

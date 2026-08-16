@@ -1207,7 +1207,7 @@ button:disabled {
   }
 }
 
-/* Card readability pass: one visual grammar for draft cards and battle creatures. */
+/* Card readability pass: one visual grammar for roster cards and battle creatures. */
 .card,
 .creature {
   isolation: isolate;
