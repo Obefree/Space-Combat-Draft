@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 async function render() {
@@ -51,6 +51,7 @@ test("keeps the space combat rules encoded in source", async () => {
   assert.match(source, /const REINFORCEMENTS_PER_ROUND = 1;/);
   assert.match(source, /const BATTLE_HAND_SIZE = 6;/);
   assert.match(source, /const SPACE_CARD_COVER_ART = "\/card-art\/space\/space-card-cover-v1\.png";/);
+  assert.match(source, /const SPACE_CARD_ART_BY_ID: Partial<Record<string, string>> = {/);
   assert.match(source, /const SYMMETRIC_DECK_CARD_IDS = \[/);
   assert.match(source, /function makeRandomBattle\(cards: CardData\[\], seedText: string\): GameState/);
   assert.match(source, /hand: deckA\.slice\(0, BATTLE_HAND_SIZE\)/);
@@ -66,4 +67,28 @@ test("keeps the space combat rules encoded in source", async () => {
   assert.doesNotMatch(source, /deck_select/);
   assert.doesNotMatch(source, /selectedIds\.length !== 8/);
   assert.doesNotMatch(source, /личные кубы на каждой карте/);
+});
+
+test("has generated space art for each symmetric battle card", async () => {
+  const cardIds = [
+    "swift_blade",
+    "raider",
+    "huntress",
+    "mercenary_captain",
+    "bastion",
+    "bodyguard",
+    "paladin",
+    "alchemist",
+    "transmuter",
+    "old_veteran",
+  ];
+  const source = await readFile(
+    new URL("../app/DiceDraftGame.tsx", import.meta.url),
+    "utf8",
+  );
+
+  for (const cardId of cardIds) {
+    assert.match(source, new RegExp(`${cardId}: "/card-art/space/generated/${cardId}\\.png"`));
+    await access(new URL(`../public/card-art/space/generated/${cardId}.png`, import.meta.url));
+  }
 });

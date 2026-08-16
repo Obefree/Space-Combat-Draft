@@ -111,6 +111,19 @@ const BATTLE_HAND_SIZE = 6;
 const DEFAULT_SEED_TEXT = "playtest-01";
 const SPACE_CARD_COVER_ART = "/card-art/space/space-card-cover-v1.png";
 
+const SPACE_CARD_ART_BY_ID: Partial<Record<string, string>> = {
+  alchemist: "/card-art/space/generated/alchemist.png",
+  bastion: "/card-art/space/generated/bastion.png",
+  bodyguard: "/card-art/space/generated/bodyguard.png",
+  huntress: "/card-art/space/generated/huntress.png",
+  mercenary_captain: "/card-art/space/generated/mercenary_captain.png",
+  old_veteran: "/card-art/space/generated/old_veteran.png",
+  paladin: "/card-art/space/generated/paladin.png",
+  raider: "/card-art/space/generated/raider.png",
+  swift_blade: "/card-art/space/generated/swift_blade.png",
+  transmuter: "/card-art/space/generated/transmuter.png",
+};
+
 const SYMMETRIC_DECK_CARD_IDS = [
   "swift_blade",
   "raider",
@@ -631,6 +644,9 @@ function abilityPrimaryObject(ability: Ability) {
 }
 
 function spaceArtForCard(card: CardData) {
+  const generatedArt = SPACE_CARD_ART_BY_ID[card.id];
+  if (generatedArt) return generatedArt;
+
   const attack = card.dice.filter((die) => die === "attack").length;
   const defense = card.dice.filter((die) => die === "defense").length;
   const magic = card.dice.filter((die) => die === "magic").length;
