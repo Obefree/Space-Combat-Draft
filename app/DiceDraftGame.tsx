@@ -106,7 +106,7 @@ const DIE_FACE_VALUES = [1, 1, 2, 2, 3, 3];
 const PLAYER_DECK_SIZE = 10;
 const OPENING_CARDS_PER_PLAYER = 3;
 const REINFORCEMENT_ROUNDS = 2;
-const REINFORCEMENTS_PER_ROUND = 2;
+const REINFORCEMENTS_PER_ROUND = 1;
 const BATTLE_HAND_SIZE = 6;
 const DEFAULT_SEED_TEXT = "playtest-01";
 
@@ -974,7 +974,7 @@ function startNextRoundOrDeployment(state: GameState): GameState {
           needsDie: false,
           selectedTargetId: null,
           log: [
-            `Раунд ${state.battle.round} завершён. Выберите подкрепления ${nextWave}/2: по ${count} карты из руки.`,
+            `Раунд ${state.battle.round} завершён. Выберите подкрепления ${nextWave}/2: по ${count} карте из руки.`,
             ...state.battle.log,
           ].slice(0, 24),
         },
@@ -1519,7 +1519,7 @@ function RulesGuide() {
             <p>
               У каждого игрока одинаковая сбалансированная колода из 10 карт. Перед боем
               каждая колода отдельно перемешивается, и из неё случайно берутся 6 карт в руку.
-              Игрок сам выбирает 3 стартовых корабля, затем 2 раунда подкреплений до 2 кораблей.
+              Игрок сам выбирает 3 стартовых корабля, затем 2 раунда подкреплений по 1 кораблю.
             </p>
           </article>
           <article>
@@ -1758,7 +1758,7 @@ export function SpaceCombatGame() {
           <p>
             Альтернативный тест для космической 4X: у каждого игрока симметричная колода из 10 карт,
             перед боем случайно берутся 6 в руку. Игрок сам выбирает 3 корабля на старт, затем
-            ещё 2 раунда подкреплений до 2 кораблей, а кубы идут в общий пул своего игрока.
+            ещё 2 раунда подкреплений по 1 кораблю, а кубы идут в общий пул своего игрока.
           </p>
         </div>
         <div className="seedBox">
