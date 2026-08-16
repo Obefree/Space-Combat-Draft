@@ -8,9 +8,10 @@ Hot-seat prototype for a space 4X combat system based on the Dice Draft draft-an
 - Each player chooses 5 cards for the battle hand.
 - Battle starts with 3 ships per player.
 - The remaining 2 cards stay in hand and are added later as reinforcements.
-- Dice are not taken from a common pool.
-- When a ship enters battle, it immediately rolls its printed dice and keeps them on that card.
-- Abilities spend dice attached to the active ship.
+- Dice are not taken from one shared table pool.
+- Each player has their own common dice pool.
+- When a ship enters battle, it immediately rolls its printed dice into its owner's pool.
+- Abilities spend dice from the active ship owner's pool.
 
 ## Run Locally
 

@@ -33,7 +33,7 @@ test("server-renders the Space Combat Draft shell", async () => {
   assert.match(html, /Космическая боевая система/);
   assert.match(html, /5 карт в боевой руке/);
   assert.match(html, /3 корабля на старте/);
-  assert.match(html, /личные кубы на каждой карте/);
+  assert.match(html, /отдельный общий пул кубов у каждого игрока/);
 });
 
 test("keeps the space combat rules encoded in source", async () => {
@@ -45,7 +45,9 @@ test("keeps the space combat rules encoded in source", async () => {
   assert.match(source, /const OPENING_CARDS_PER_PLAYER = 3;/);
   assert.match(source, /const RESERVE_CARDS_PER_PLAYER = 2;/);
   assert.match(source, /const BATTLE_DECK_SIZE = OPENING_CARDS_PER_PLAYER \+ RESERVE_CARDS_PER_PLAYER;/);
+  assert.match(source, /pools: Record<PlayerId, Die\[]>;/);
+  assert.match(source, /deployOneCreature\(nextState, playerId, card, pools\)/);
   assert.doesNotMatch(source, /needsDie:\s*true/);
   assert.doesNotMatch(source, /selectedIds\.length !== 8/);
-  assert.doesNotMatch(source, /Общий пул кубов/);
+  assert.doesNotMatch(source, /личные кубы на каждой карте/);
 });
