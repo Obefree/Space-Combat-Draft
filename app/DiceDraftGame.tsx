@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 type PlayerId = "A" | "B";
-type Phase = "loading" | "battle" | "finished";
+type Phase = "loading" | "deploy_select" | "battle" | "finished";
 type RulesMode = "full" | "light";
 type DieType = "attack" | "defense" | "magic";
 
@@ -67,13 +67,13 @@ type Player = {
   id: PlayerId;
   name: string;
   roster: CardData[];
-  deck: CardData[];
+  hand: CardData[];
   creatures: Creature[];
-  nextDeckIndex: number;
 };
 
 type BattleState = {
   round: number;
+  reinforcementWave: number;
   queue: string[];
   activeCreatureId: string | null;
   needsDie: boolean;
@@ -88,16 +88,27 @@ type GameState = {
   rng: number;
   allCards: CardData[];
   players: Record<PlayerId, Player>;
+  deployment: DeploymentState | null;
   battle: BattleState | null;
   nextCreatureNumber: number;
   nextDieNumber: number;
 };
 
+type DeploymentState = {
+  playerId: PlayerId;
+  count: number;
+  wave: number;
+  nextRound: number;
+  selectedIds: string[];
+};
+
 const DIE_FACE_VALUES = [1, 1, 2, 2, 3, 3];
 const PLAYER_DECK_SIZE = 10;
 const OPENING_CARDS_PER_PLAYER = 3;
-const RESERVE_CARDS_PER_PLAYER = 2;
-const BATTLE_DECK_SIZE = OPENING_CARDS_PER_PLAYER + RESERVE_CARDS_PER_PLAYER;
+const REINFORCEMENT_ROUNDS = 2;
+const REINFORCEMENTS_PER_ROUND = 2;
+const BATTLE_HAND_SIZE =
+  OPENING_CARDS_PER_PLAYER + REINFORCEMENT_ROUNDS * REINFORCEMENTS_PER_ROUND;
 const DEFAULT_SEED_TEXT = "playtest-01";
 
 const SYMMETRIC_DECK_CARD_IDS = [
@@ -129,17 +140,15 @@ const EMPTY_PLAYERS: Record<PlayerId, Player> = {
     id: "A",
     name: PLAYERS.A.name,
     roster: [],
-    deck: [],
+    hand: [],
     creatures: [],
-    nextDeckIndex: 0,
   },
   B: {
     id: "B",
     name: PLAYERS.B.name,
     roster: [],
-    deck: [],
+    hand: [],
     creatures: [],
-    nextDeckIndex: 0,
   },
 };
 
@@ -180,6 +189,7 @@ function initialState(): GameState {
     rng: hashSeed(DEFAULT_SEED_TEXT),
     allCards: [],
     players: structuredClone(EMPTY_PLAYERS),
+    deployment: null,
     battle: null,
     nextCreatureNumber: 1,
     nextDieNumber: 1,
@@ -221,22 +231,41 @@ function makeRandomBattle(cards: CardData[], seedText: string): GameState {
   players.A = {
     ...players.A,
     roster: baseDeck,
-    deck: deckA.slice(0, BATTLE_DECK_SIZE),
+    hand: deckA.slice(0, BATTLE_HAND_SIZE),
   };
   players.B = {
     ...players.B,
     roster: baseDeck,
-    deck: deckB.slice(0, BATTLE_DECK_SIZE),
+    hand: deckB.slice(0, BATTLE_HAND_SIZE),
   };
 
-  return startBattle({
+  return {
     ...initialState(),
-    phase: "battle",
+    phase: "deploy_select",
     seedText,
     rng: rngAfterB,
     allCards: cards,
     players,
-  });
+    deployment: {
+      playerId: "A",
+      count: OPENING_CARDS_PER_PLAYER,
+      wave: 0,
+      nextRound: 1,
+      selectedIds: [],
+    },
+    battle: {
+      round: 1,
+      reinforcementWave: 0,
+      queue: [],
+      activeCreatureId: null,
+      needsDie: false,
+      pools: emptyPools(),
+      selectedTargetId: null,
+      log: [
+        "Каждый игрок получил 7 карт из симметричной колоды 10. Выберите стартовые 3 корабля.",
+      ],
+    },
+  };
 }
 
 function sortInitiative(creatures: Creature[]) {
@@ -301,7 +330,7 @@ function clonePlayers(players: Record<PlayerId, Player>): Record<PlayerId, Playe
     A: {
       ...players.A,
       roster: [...players.A.roster],
-      deck: [...players.A.deck],
+      hand: [...players.A.hand],
       creatures: players.A.creatures.map((creature) => ({
         ...creature,
         attached: [...creature.attached],
@@ -310,7 +339,7 @@ function clonePlayers(players: Record<PlayerId, Player>): Record<PlayerId, Playe
     B: {
       ...players.B,
       roster: [...players.B.roster],
-      deck: [...players.B.deck],
+      hand: [...players.B.hand],
       creatures: players.B.creatures.map((creature) => ({
         ...creature,
         attached: [...creature.attached],
@@ -347,42 +376,89 @@ function deployOneCreature(
   return [creature, nextState];
 }
 
-function startBattle(state: GameState): GameState {
+function confirmDeploymentSelection(state: GameState): GameState {
+  if (!state.deployment || !state.battle) return state;
+  const { playerId, count, selectedIds, wave, nextRound } = state.deployment;
+  if (selectedIds.length !== count) return state;
+
   const players = clonePlayers(state.players);
-  const pools = emptyPools();
+  const player = players[playerId];
+  const selectedCards = selectedIds
+    .map((id) => player.hand.find((card) => card.id === id))
+    .filter((card): card is CardData => Boolean(card));
+  if (selectedCards.length !== count) return state;
+
+  const selectedIdSet = new Set(selectedIds);
+  const pools = clonePools(state.battle.pools);
+  const log = [...state.battle.log];
   let nextState = state;
 
-  for (const playerId of ["A", "B"] as PlayerId[]) {
-    const openingCards = players[playerId].deck.slice(0, OPENING_CARDS_PER_PLAYER);
-    const deployed: Creature[] = [];
-    for (const card of openingCards) {
-      const [creature, rolledState] = deployOneCreature(nextState, playerId, card, pools);
-      nextState = rolledState;
-      deployed.push(creature);
-    }
-    players[playerId] = {
-      ...players[playerId],
-      creatures: deployed,
-      nextDeckIndex: openingCards.length,
+  for (const card of selectedCards) {
+    const [creature, rolledState] = deployOneCreature(nextState, playerId, card, pools);
+    nextState = rolledState;
+    players[playerId].creatures.push(creature);
+  }
+
+  players[playerId] = {
+    ...players[playerId],
+    hand: player.hand.filter((card) => !selectedIdSet.has(card.id)),
+  };
+  log.unshift(
+    `${PLAYERS[playerId].name} выводит ${selectedCards.length} корабля: ${selectedCards
+      .map((card) => card.name_ru)
+      .join(", ")}.`,
+  );
+
+  if (playerId === "A") {
+    return {
+      ...nextState,
+      players,
+      battle: {
+        ...state.battle,
+        pools,
+        log: log.slice(0, 24),
+      },
+      deployment: {
+        ...state.deployment,
+        playerId: "B",
+        selectedIds: [],
+      },
     };
   }
 
   const queue = sortInitiative(allCreatures(players));
+  const roundIntro =
+    wave === 0
+      ? "Бой начался: игроки сами выбрали стартовые 3 корабля, а кубы ушли в пулы владельцев."
+      : `Раунд ${nextRound}: игроки сами выбрали подкрепления ${wave}/2.`;
+
+  const battleState: BattleState = {
+    ...state.battle,
+    round: nextRound,
+    reinforcementWave: wave,
+    queue,
+    activeCreatureId: queue[0] ?? null,
+    needsDie: false,
+    pools,
+    selectedTargetId: null,
+    log: [roundIntro, ...log].slice(0, 24),
+  };
+
+  if (queue.length === 0 || !bothSidesCanContinue(players)) {
+    return finishGame({
+      ...nextState,
+      players,
+      deployment: null,
+      battle: battleState,
+    });
+  }
+
   return {
     ...nextState,
     phase: "battle",
     players,
-    battle: {
-      round: 1,
-      queue,
-      activeCreatureId: queue[0] ?? null,
-      needsDie: false,
-      pools,
-      selectedTargetId: null,
-      log: [
-        "Бой начался: каждый игрок выставил 3 корабля, а напечатанные кубы ушли в его личный общий пул.",
-      ],
-    },
+    deployment: null,
+    battle: battleState,
   };
 }
 
@@ -867,40 +943,57 @@ function resolveAbility(
   };
 }
 
-function reinforceAndQueue(state: GameState): GameState {
+function startNextRoundOrDeployment(state: GameState): GameState {
   if (!state.battle) return state;
-  let nextState = state;
-  const players = clonePlayers(state.players);
-  const pools = clonePools(state.battle.pools);
-  const log = [...state.battle.log];
 
-  for (const playerId of ["A", "B"] as PlayerId[]) {
-    const nextCard = players[playerId].deck[players[playerId].nextDeckIndex];
-    if (!nextCard) continue;
-    const [creature, rolledState] = deployOneCreature(nextState, playerId, nextCard, pools);
-    nextState = rolledState;
-    players[playerId].creatures.push(creature);
-    players[playerId].nextDeckIndex += 1;
-    log.unshift(`${PLAYERS[playerId].name} докладывает корабль из руки: ${nextCard.name_ru}.`);
+  if (!bothSidesCanContinue(state.players)) {
+    return finishGame(state);
   }
 
-  const queue = sortInitiative(allCreatures(players));
-  if (queue.length === 0 || !bothSidesCanContinue(players)) {
-    return finishGame({ ...nextState, players, battle: { ...state.battle, pools, log } });
+  if (state.battle.reinforcementWave < REINFORCEMENT_ROUNDS) {
+    const nextWave = state.battle.reinforcementWave + 1;
+    const count = Math.min(REINFORCEMENTS_PER_ROUND, state.players.A.hand.length);
+    if (count > 0 && state.players.B.hand.length >= count) {
+      return {
+        ...state,
+        phase: "deploy_select",
+        deployment: {
+          playerId: "A",
+          count,
+          wave: nextWave,
+          nextRound: state.battle.round + 1,
+          selectedIds: [],
+        },
+        battle: {
+          ...state.battle,
+          queue: [],
+          activeCreatureId: null,
+          needsDie: false,
+          selectedTargetId: null,
+          log: [
+            `Раунд ${state.battle.round} завершён. Выберите подкрепления ${nextWave}/2: по ${count} карты из руки.`,
+            ...state.battle.log,
+          ].slice(0, 24),
+        },
+      };
+    }
+  }
+
+  const queue = sortInitiative(allCreatures(state.players));
+  if (queue.length === 0 || !bothSidesCanContinue(state.players)) {
+    return finishGame(state);
   }
 
   return {
-    ...nextState,
-    players,
+    ...state,
     battle: {
       ...state.battle,
       round: state.battle.round + 1,
       queue,
       activeCreatureId: queue[0] ?? null,
       needsDie: false,
-      pools,
       selectedTargetId: null,
-      log: [`Раунд ${state.battle.round + 1}: очередь инициативы обновлена.`, ...log].slice(0, 24),
+      log: [`Раунд ${state.battle.round + 1}: очередь инициативы обновлена.`, ...state.battle.log].slice(0, 24),
     },
   };
 }
@@ -909,7 +1002,7 @@ function bothSidesCanContinue(players: Record<PlayerId, Player>) {
   return (["A", "B"] as PlayerId[]).every(
     (playerId) =>
       players[playerId].creatures.some((creature) => creature.alive) ||
-      players[playerId].nextDeckIndex < players[playerId].deck.length,
+      players[playerId].hand.length > 0,
   );
 }
 
@@ -939,7 +1032,7 @@ function advanceActivation(state: GameState): GameState {
     return creature?.alive && id !== state.battle?.activeCreatureId;
   });
 
-  if (queue.length === 0) return reinforceAndQueue({ ...state, battle: { ...state.battle, queue } });
+  if (queue.length === 0) return startNextRoundOrDeployment({ ...state, battle: { ...state.battle, queue } });
 
   return {
     ...state,
@@ -1149,6 +1242,42 @@ function CardFrame({
   );
 }
 
+function HandCardButton({
+  card,
+  owner,
+  selected,
+  disabled,
+  onClick,
+}: {
+  card: CardData;
+  owner: PlayerId;
+  selected: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const flavor = dominantDie(card);
+  return (
+    <button
+      className={`card ${flavor} ${selected ? "selected" : ""}`}
+      disabled={disabled && !selected}
+      onClick={onClick}
+      type="button"
+    >
+      <CardFrame card={card} hpText={`${card.health}`} owner={owner}>
+        {card.abilities.map((ability) => (
+          <p key={ability.id}>
+            <span className="abilityLineHead">
+              <b>{ability.name_ru}</b>
+              <AbilityImpact ability={ability} />
+            </span>
+            <span className="abilityRule">{ability.text_ru}</span>
+          </p>
+        ))}
+      </CardFrame>
+    </button>
+  );
+}
+
 function CreatureCard({
   creature,
   active,
@@ -1261,7 +1390,7 @@ function RulesGuide() {
           <article>
             <h3>Быстрый старт</h3>
             <ol>
-              <li>Нажми “новая битва”, чтобы получить новую случайную руку из 5 карт.</li>
+              <li>Нажми “новая битва”, чтобы получить новую случайную руку из 7 карт.</li>
               <li>Для простой партии включи Light mode.</li>
               <li>Меняй seed, чтобы повторять или сравнивать конкретную раздачу.</li>
             </ol>
@@ -1270,8 +1399,8 @@ function RulesGuide() {
             <h3>Колоды</h3>
             <p>
               У каждого игрока одинаковая сбалансированная колода из 10 карт. Перед боем
-              каждая колода отдельно перемешивается, и из неё случайно берутся 5 карт:
-              3 стартуют на поле, 2 остаются резервом.
+              каждая колода отдельно перемешивается, и из неё случайно берутся 7 карт в руку.
+              Игрок сам выбирает 3 стартовых корабля, затем 2 раунда по 2 подкрепления.
             </p>
           </article>
           <article>
@@ -1404,6 +1533,30 @@ export function SpaceCombatGame() {
     setState(makeRandomBattle(cards, seedInput));
   }
 
+  function toggleDeploymentCard(cardId: string) {
+    if (!state.deployment) return;
+    const selectedIds = state.deployment.selectedIds;
+    const nextSelectedIds = selectedIds.includes(cardId)
+      ? selectedIds.filter((id) => id !== cardId)
+      : selectedIds.length < state.deployment.count
+        ? [...selectedIds, cardId]
+        : selectedIds;
+
+    setState({
+      ...state,
+      deployment: {
+        ...state.deployment,
+        selectedIds: nextSelectedIds,
+      },
+    });
+  }
+
+  function confirmDeployment() {
+    setArmedAbilityId(null);
+    setDraggedAbilityId(null);
+    setState((current) => confirmDeploymentSelection(current));
+  }
+
   function activateAbilityOnCreature(creatureId: string) {
     if (!activeAbility) return;
     setState(resolveAbility(state, activeAbility, creatureId));
@@ -1445,10 +1598,16 @@ export function SpaceCombatGame() {
     );
   }
 
+  const deploymentPlayer = state.deployment
+    ? state.players[state.deployment.playerId]
+    : null;
+
   return (
     <main
       className={`shell ${
-        state.phase === "battle" || state.phase === "finished" ? "battleShell" : ""
+        state.phase === "deploy_select" || state.phase === "battle" || state.phase === "finished"
+          ? "battleShell"
+          : ""
       }`}
       style={{ "--game-scale": gameScale / 100 } as CSSProperties}
     >
@@ -1460,8 +1619,8 @@ export function SpaceCombatGame() {
           <h1>Космическая боевая система</h1>
           <p>
             Альтернативный тест для космической 4X: у каждого игрока симметричная колода из 10 карт,
-            перед боем случайно берутся 5, 3 корабля стартуют сразу, 2 приходят позже, а кубы идут
-            в общий пул своего игрока.
+            перед боем случайно берутся 7 в руку. Игрок сам выбирает 3 корабля на старт, затем
+            ещё 2 раунда по 2 подкрепления, а кубы идут в общий пул своего игрока.
           </p>
         </div>
         <div className="seedBox">
@@ -1481,7 +1640,7 @@ export function SpaceCombatGame() {
               disabled={!cardsLoaded}
               onClick={() => startRandomBattle(seedInput)}
             >
-              пересдать 5
+              пересдать руку
             </button>
             <button
               type="button"
@@ -1518,16 +1677,68 @@ export function SpaceCombatGame() {
       <section className="scoreBar">
         <div>
           <span>{PLAYERS.A.name}</span>
-          <strong>{state.players.A.roster.length} в колоде · {state.players.A.deck.length} в бою · ★{score(state.players.A)}</strong>
+          <strong>{state.players.A.roster.length} в колоде · {state.players.A.hand.length} в руке · ★{score(state.players.A)}</strong>
         </div>
         <div>
           <span>{PLAYERS.B.name}</span>
-          <strong>{state.players.B.roster.length} в колоде · {state.players.B.deck.length} в бою · ★{score(state.players.B)}</strong>
+          <strong>{state.players.B.roster.length} в колоде · {state.players.B.hand.length} в руке · ★{score(state.players.B)}</strong>
         </div>
       </section>
 
       {state.phase === "loading" ? (
         <section className="panel">Загружаю карты…</section>
+      ) : null}
+
+      {state.phase === "deploy_select" && state.deployment && deploymentPlayer ? (
+        <section className="panel deploymentPanel">
+          <div className="phaseHead">
+            <div>
+              <p className="eyebrow">
+                {state.deployment.wave === 0
+                  ? "Стартовая выкладка"
+                  : `Подкрепления ${state.deployment.wave}/${REINFORCEMENT_ROUNDS}`}
+              </p>
+              <h2>
+                {deploymentPlayer.name}: выбери {state.deployment.count} из руки ·{" "}
+                {state.deployment.selectedIds.length}/{state.deployment.count}
+              </h2>
+            </div>
+            <button
+              type="button"
+              disabled={state.deployment.selectedIds.length !== state.deployment.count}
+              onClick={confirmDeployment}
+            >
+              подтвердить
+            </button>
+          </div>
+          <div className="deploymentMeta">
+            <span>{state.deployment.wave === 0 ? "Перед боем" : `Перед раундом ${state.deployment.nextRound}`}</span>
+            <strong>
+              {state.deployment.wave === 0
+                ? "выберите стартовые корабли"
+                : "выберите корабли, которые войдут подкреплением"}
+            </strong>
+            <span>Осталось в руке: {deploymentPlayer.hand.length}</span>
+          </div>
+          <div className="cardGrid">
+            {deploymentPlayer.hand.map((card) => {
+              const selected = state.deployment?.selectedIds.includes(card.id) ?? false;
+              return (
+                <HandCardButton
+                  card={card}
+                  disabled={
+                    Boolean(state.deployment) &&
+                    state.deployment.selectedIds.length >= state.deployment.count
+                  }
+                  key={card.id}
+                  owner={state.deployment?.playerId ?? "A"}
+                  selected={selected}
+                  onClick={() => toggleDeploymentCard(card.id)}
+                />
+              );
+            })}
+          </div>
+        </section>
       ) : null}
 
       {(state.phase === "battle" || state.phase === "finished") && state.battle ? (
@@ -1557,7 +1768,7 @@ export function SpaceCombatGame() {
                 <div className="poolGroup magic">
                   <div className="poolGroupHead">
                     <strong>Правило</strong>
-                    <span>{OPENING_CARDS_PER_PLAYER}+{RESERVE_CARDS_PER_PLAYER}</span>
+                    <span>{OPENING_CARDS_PER_PLAYER}+{REINFORCEMENT_ROUNDS}×{REINFORCEMENTS_PER_ROUND}</span>
                   </div>
                   <span className="muted">
                     Корабль при выходе бросает напечатанные кубы в общий пул своего игрока.
@@ -1670,12 +1881,10 @@ export function SpaceCombatGame() {
               </div>
               <div className="reinforcementInfo">
                 <span>
-                  Подкрепления A:{" "}
-                  {Math.max(0, state.players.A.deck.length - state.players.A.nextDeckIndex)}
+                  Рука A: {state.players.A.hand.length}
                 </span>
                 <span>
-                  Подкрепления B:{" "}
-                  {Math.max(0, state.players.B.deck.length - state.players.B.nextDeckIndex)}
+                  Рука B: {state.players.B.hand.length}
                 </span>
               </div>
             </div>

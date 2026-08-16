@@ -409,6 +409,32 @@ button:disabled {
   outline: 4px solid var(--gold);
 }
 
+.card:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.deploymentMeta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  margin: -4px 0 14px;
+  color: rgba(255, 248, 236, 0.72);
+  font-size: 0.88rem;
+}
+
+.deploymentMeta strong {
+  color: var(--gold);
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.deploymentMeta span:last-child {
+  text-align: right;
+}
+
 .cardArt {
   position: relative;
   display: grid;
