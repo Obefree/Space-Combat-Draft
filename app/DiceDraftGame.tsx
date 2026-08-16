@@ -107,8 +107,7 @@ const PLAYER_DECK_SIZE = 10;
 const OPENING_CARDS_PER_PLAYER = 3;
 const REINFORCEMENT_ROUNDS = 2;
 const REINFORCEMENTS_PER_ROUND = 2;
-const BATTLE_HAND_SIZE =
-  OPENING_CARDS_PER_PLAYER + REINFORCEMENT_ROUNDS * REINFORCEMENTS_PER_ROUND;
+const BATTLE_HAND_SIZE = 6;
 const DEFAULT_SEED_TEXT = "playtest-01";
 
 const SYMMETRIC_DECK_CARD_IDS = [
@@ -262,7 +261,7 @@ function makeRandomBattle(cards: CardData[], seedText: string): GameState {
       pools: emptyPools(),
       selectedTargetId: null,
       log: [
-        "Каждый игрок получил 7 карт из симметричной колоды 10. Выберите стартовые 3 корабля.",
+        "Каждый игрок получил 6 карт из симметричной колоды 10. Выберите стартовые 3 корабля.",
       ],
     },
   };
@@ -952,8 +951,12 @@ function startNextRoundOrDeployment(state: GameState): GameState {
 
   if (state.battle.reinforcementWave < REINFORCEMENT_ROUNDS) {
     const nextWave = state.battle.reinforcementWave + 1;
-    const count = Math.min(REINFORCEMENTS_PER_ROUND, state.players.A.hand.length);
-    if (count > 0 && state.players.B.hand.length >= count) {
+    const count = Math.min(
+      REINFORCEMENTS_PER_ROUND,
+      state.players.A.hand.length,
+      state.players.B.hand.length,
+    );
+    if (count > 0) {
       return {
         ...state,
         phase: "deploy_select",
@@ -1209,6 +1212,7 @@ function CardFrame({
   compact,
   hpText,
   healthPercent,
+  onArtClick,
   children,
 }: {
   card: CardData;
@@ -1216,6 +1220,7 @@ function CardFrame({
   compact?: boolean;
   hpText: string;
   healthPercent?: number;
+  onArtClick?: () => void;
   children?: ReactNode;
 }) {
   const flavor = dominantDie(card);
@@ -1223,7 +1228,24 @@ function CardFrame({
   return (
     <div className={`cardFrame ${compact ? "compact" : ""}`}>
       <div className="frameHero">
-        <div className="frameArt">
+        <div
+          className={`frameArt ${onArtClick ? "frameArtButton" : ""}`}
+          role={onArtClick ? "button" : undefined}
+          tabIndex={onArtClick ? 0 : undefined}
+          onClick={(event) => {
+            if (!onArtClick) return;
+            event.stopPropagation();
+            onArtClick();
+          }}
+          onKeyDown={(event) => {
+            if (!onArtClick) return;
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              event.stopPropagation();
+              onArtClick();
+            }
+          }}
+        >
           <img alt="" src={art} />
         </div>
         <FrameDiceRail card={card} />
@@ -1248,22 +1270,24 @@ function HandCardButton({
   selected,
   disabled,
   onClick,
+  onInspect,
 }: {
   card: CardData;
   owner: PlayerId;
   selected: boolean;
   disabled: boolean;
   onClick: () => void;
+  onInspect: () => void;
 }) {
   const flavor = dominantDie(card);
   return (
     <button
-      className={`card ${flavor} ${selected ? "selected" : ""}`}
+      className={`card compact handChoiceCard ${flavor} ${selected ? "selected" : ""}`}
       disabled={disabled && !selected}
       onClick={onClick}
       type="button"
     >
-      <CardFrame card={card} hpText={`${card.health}`} owner={owner}>
+      <CardFrame card={card} compact hpText={`${card.health}`} owner={owner} onArtClick={onInspect}>
         {card.abilities.map((ability) => (
           <p key={ability.id}>
             <span className="abilityLineHead">
@@ -1290,6 +1314,7 @@ function CreatureCard({
   onAbilityDragEnd,
   onAbilityTap,
   onDropAbility,
+  onInspect,
 }: {
   creature: Creature;
   active: boolean;
@@ -1302,6 +1327,7 @@ function CreatureCard({
   onAbilityDragEnd: () => void;
   onAbilityTap: (ability: Ability) => void;
   onDropAbility: () => void;
+  onInspect: () => void;
 }) {
   const healthPercent = Math.max(0, (creature.hp / creature.card.health) * 100);
   return (
@@ -1327,6 +1353,7 @@ function CreatureCard({
         healthPercent={healthPercent}
         hpText={`${creature.hp}/${creature.card.health}`}
         owner={creature.owner}
+        onArtClick={onInspect}
       >
         {creature.card.abilities.map((ability) => {
           const payment = findPayment(ownerPool, ability.cost);
@@ -1368,6 +1395,98 @@ function CreatureCard({
   );
 }
 
+function MiniHandCard({
+  card,
+  owner,
+  onInspect,
+}: {
+  card: CardData;
+  owner: PlayerId;
+  onInspect: () => void;
+}) {
+  return (
+    <button
+      className={`miniHandCard ${dominantDie(card)}`}
+      type="button"
+      onClick={onInspect}
+      title={card.name_ru}
+    >
+      <CardFrame card={card} compact hpText={`${card.health}`} owner={owner} />
+    </button>
+  );
+}
+
+function HandsOverview({
+  players,
+  onInspect,
+}: {
+  players: Record<PlayerId, Player>;
+  onInspect: (card: CardData, owner: PlayerId) => void;
+}) {
+  return (
+    <section className="handsOverview" aria-label="Руки игроков">
+      {(["A", "B"] as PlayerId[]).map((playerId) => (
+        <div className={`handRow player${playerId}`} key={playerId}>
+          <div className="handRowHead">
+            <strong>Рука {PLAYERS[playerId].short}</strong>
+            <span>{players[playerId].hand.length}</span>
+          </div>
+          <div className="miniHandCards">
+            {players[playerId].hand.length ? (
+              players[playerId].hand.map((card) => (
+                <MiniHandCard
+                  card={card}
+                  key={card.id}
+                  owner={playerId}
+                  onInspect={() => onInspect(card, playerId)}
+                />
+              ))
+            ) : (
+              <span className="emptyHand">рука пуста</span>
+            )}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function CardInspectModal({
+  card,
+  owner,
+  onClose,
+}: {
+  card: CardData;
+  owner?: PlayerId;
+  onClose: () => void;
+}) {
+  return (
+    <div className="cardModalBackdrop">
+      <div
+        aria-modal="true"
+        className="cardModal"
+        role="dialog"
+        aria-label={card.name_ru}
+      >
+        <button className="modalClose" type="button" onClick={onClose}>
+          закрыть
+        </button>
+        <CardFrame card={card} hpText={`${card.health}`} owner={owner}>
+          {card.abilities.map((ability) => (
+            <p key={ability.id}>
+              <span className="abilityLineHead">
+                <b>{ability.name_ru}</b>
+                <AbilityImpact ability={ability} />
+              </span>
+              <span className="abilityRule">{ability.text_ru}</span>
+            </p>
+          ))}
+        </CardFrame>
+      </div>
+    </div>
+  );
+}
+
 function RulesGuide() {
   return (
     <section className="rulesGuide" aria-label="Правила и описание игры">
@@ -1390,7 +1509,7 @@ function RulesGuide() {
           <article>
             <h3>Быстрый старт</h3>
             <ol>
-              <li>Нажми “новая битва”, чтобы получить новую случайную руку из 7 карт.</li>
+              <li>Нажми “новая битва”, чтобы получить новую случайную руку из 6 карт.</li>
               <li>Для простой партии включи Light mode.</li>
               <li>Меняй seed, чтобы повторять или сравнивать конкретную раздачу.</li>
             </ol>
@@ -1399,8 +1518,8 @@ function RulesGuide() {
             <h3>Колоды</h3>
             <p>
               У каждого игрока одинаковая сбалансированная колода из 10 карт. Перед боем
-              каждая колода отдельно перемешивается, и из неё случайно берутся 7 карт в руку.
-              Игрок сам выбирает 3 стартовых корабля, затем 2 раунда по 2 подкрепления.
+              каждая колода отдельно перемешивается, и из неё случайно берутся 6 карт в руку.
+              Игрок сам выбирает 3 стартовых корабля, затем 2 раунда подкреплений до 2 кораблей.
             </p>
           </article>
           <article>
@@ -1475,6 +1594,10 @@ export function SpaceCombatGame() {
   const [gameScale, setGameScale] = useState(() => readStoredGameScale());
   const [armedAbilityId, setArmedAbilityId] = useState<string | null>(null);
   const [draggedAbilityId, setDraggedAbilityId] = useState<string | null>(null);
+  const [inspectedCard, setInspectedCard] = useState<{
+    card: CardData;
+    owner?: PlayerId;
+  } | null>(null);
   const cardsLoaded = fullCards.length > 0;
 
   useEffect(() => {
@@ -1499,6 +1622,15 @@ export function SpaceCombatGame() {
     window.localStorage.setItem("space-combat-rules-mode", rulesMode);
   }, [rulesMode]);
 
+  useEffect(() => {
+    if (!inspectedCard) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setInspectedCard(null);
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [inspectedCard]);
+
   const activeCreature = useMemo(
     () => getCreature(state.players, state.battle?.activeCreatureId ?? null),
     [state.players, state.battle?.activeCreatureId],
@@ -1516,6 +1648,7 @@ export function SpaceCombatGame() {
     if (!cardsLoaded) return;
     setArmedAbilityId(null);
     setDraggedAbilityId(null);
+    setInspectedCard(null);
     setState(makeRandomBattle(cardsForRulesMode(fullCards, rulesMode), seedText));
     setSeedInput(seedText);
   }
@@ -1524,12 +1657,17 @@ export function SpaceCombatGame() {
     restart(seedText);
   }
 
+  function inspectCard(card: CardData, owner?: PlayerId) {
+    setInspectedCard({ card, owner });
+  }
+
   function switchRulesMode(nextMode: RulesMode) {
     if (!cardsLoaded || nextMode === rulesMode) return;
     const cards = cardsForRulesMode(fullCards, nextMode);
     setRulesMode(nextMode);
     setArmedAbilityId(null);
     setDraggedAbilityId(null);
+    setInspectedCard(null);
     setState(makeRandomBattle(cards, seedInput));
   }
 
@@ -1619,8 +1757,8 @@ export function SpaceCombatGame() {
           <h1>Космическая боевая система</h1>
           <p>
             Альтернативный тест для космической 4X: у каждого игрока симметричная колода из 10 карт,
-            перед боем случайно берутся 7 в руку. Игрок сам выбирает 3 корабля на старт, затем
-            ещё 2 раунда по 2 подкрепления, а кубы идут в общий пул своего игрока.
+            перед боем случайно берутся 6 в руку. Игрок сам выбирает 3 корабля на старт, затем
+            ещё 2 раунда подкреплений до 2 кораблей, а кубы идут в общий пул своего игрока.
           </p>
         </div>
         <div className="seedBox">
@@ -1689,6 +1827,10 @@ export function SpaceCombatGame() {
         <section className="panel">Загружаю карты…</section>
       ) : null}
 
+      {state.phase !== "loading" ? (
+        <HandsOverview players={state.players} onInspect={inspectCard} />
+      ) : null}
+
       {state.phase === "deploy_select" && state.deployment && deploymentPlayer ? (
         <section className="panel deploymentPanel">
           <div className="phaseHead">
@@ -1733,6 +1875,7 @@ export function SpaceCombatGame() {
                   key={card.id}
                   owner={state.deployment?.playerId ?? "A"}
                   selected={selected}
+                  onInspect={() => inspectCard(card, state.deployment?.playerId ?? "A")}
                   onClick={() => toggleDeploymentCard(card.id)}
                 />
               );
@@ -1838,6 +1981,7 @@ export function SpaceCombatGame() {
                             onAbilityDragEnd={() => setDraggedAbilityId(null)}
                             onAbilityTap={armAbility}
                             onDropAbility={() => activateAbilityOnCreature(creature.id)}
+                            onInspect={() => inspectCard(creature.card, creature.owner)}
                             onSelect={() => {
                               if (activeAbility) activateAbilityOnCreature(creature.id);
                               else setTarget(creature.id);
@@ -1868,6 +2012,7 @@ export function SpaceCombatGame() {
                             onAbilityDragEnd={() => setDraggedAbilityId(null)}
                             onAbilityTap={armAbility}
                             onDropAbility={() => activateAbilityOnCreature(creature.id)}
+                            onInspect={() => inspectCard(creature.card, creature.owner)}
                             onSelect={() => {
                               if (activeAbility) activateAbilityOnCreature(creature.id);
                               else setTarget(creature.id);
@@ -1912,6 +2057,13 @@ export function SpaceCombatGame() {
             </details>
           </aside>
         </section>
+      ) : null}
+      {inspectedCard ? (
+        <CardInspectModal
+          card={inspectedCard.card}
+          owner={inspectedCard.owner}
+          onClose={() => setInspectedCard(null)}
+        />
       ) : null}
     </main>
   );

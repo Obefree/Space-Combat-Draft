@@ -5,9 +5,9 @@ Hot-seat prototype for a space 4X combat system based on the Dice Draft dice-com
 ## Current Combat Model
 
 - Each player has a symmetric balanced 10-card deck.
-- Before battle, each player randomly draws 7 cards from their own deck.
+- Before battle, each player randomly draws 6 cards from their own deck.
 - Each player chooses which 3 ships from hand start the battle.
-- After round 1 and round 2, each player chooses 2 more ships from hand as reinforcements.
+- After round 1 and round 2, each player chooses up to 2 more ships from hand as reinforcements.
 - Dice are not taken from one shared table pool.
 - Each player has their own common dice pool.
 - When a ship enters battle, it immediately rolls its printed dice into its owner's pool.

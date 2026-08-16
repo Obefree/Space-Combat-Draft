@@ -435,6 +435,18 @@ button:disabled {
   text-align: right;
 }
 
+.deploymentPanel .cardGrid {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.handChoiceCard {
+  min-height: 300px;
+}
+
+.handChoiceCard .cardFrame.compact .frameHero {
+  min-height: 230px;
+}
+
 .cardArt {
   position: relative;
   display: grid;
@@ -1693,6 +1705,15 @@ button:disabled {
   object-fit: cover;
 }
 
+.frameArtButton {
+  cursor: zoom-in;
+}
+
+.frameArtButton:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: -5px;
+}
+
 .frameArt span {
   position: relative;
   z-index: 1;
@@ -1972,6 +1993,180 @@ button:disabled {
   min-height: 0;
 }
 
+.handsOverview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.handRow {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.handRowHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: rgba(255, 248, 236, 0.78);
+  font-size: 0.86rem;
+}
+
+.miniHandCards {
+  display: flex;
+  min-height: 178px;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 3px;
+}
+
+.miniHandCard {
+  display: block;
+  width: 148px;
+  min-width: 148px;
+  min-height: 170px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  color: var(--text);
+  text-align: left;
+  cursor: zoom-in;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.2);
+}
+
+.miniHandCard.attack {
+  background: linear-gradient(160deg, rgba(255, 111, 97, 0.26), rgba(43, 19, 26, 0.94));
+}
+
+.miniHandCard.defense {
+  background: linear-gradient(160deg, rgba(99, 199, 217, 0.24), rgba(14, 32, 43, 0.94));
+}
+
+.miniHandCard.magic {
+  background: linear-gradient(160deg, rgba(179, 140, 255, 0.26), rgba(31, 21, 55, 0.94));
+}
+
+.miniHandCard .cardFrame.compact .frameHero {
+  min-height: 154px;
+}
+
+.miniHandCard .frameArt {
+  inset: 0 0 18px;
+  border-radius: 14px 14px 8px 8px;
+}
+
+.miniHandCard .frameDiceRail {
+  top: 6px;
+  left: 6px;
+  width: 30px;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 14px;
+}
+
+.miniHandCard .frameDiceBadge {
+  min-height: 24px;
+}
+
+.miniHandCard .frameDiceBadge i {
+  font-size: 0.66rem;
+}
+
+.miniHandCard .frameDiceBadge b {
+  margin-top: -3px;
+  font-size: 0.68rem;
+}
+
+.miniHandCard .frameStats {
+  top: 6px;
+  right: 6px;
+  gap: 4px;
+}
+
+.miniHandCard .frameStat,
+.miniHandCard .frameOwner {
+  min-width: 28px;
+  min-height: 24px;
+  font-size: 0.66rem;
+}
+
+.miniHandCard .frameTitle {
+  right: 34px;
+  bottom: 23px;
+  left: 34px;
+  padding: 4px;
+  border-radius: 9px;
+}
+
+.miniHandCard .frameTitle strong {
+  font-size: 0.7rem;
+}
+
+.miniHandCard .frameTitle small {
+  display: none;
+}
+
+.miniHandCard .frameHp {
+  bottom: -4px;
+  width: 44px;
+  height: 26px;
+  border-width: 1px;
+}
+
+.miniHandCard .frameHp span {
+  font-size: 0.72rem;
+}
+
+.emptyHand {
+  display: grid;
+  min-width: 148px;
+  place-items: center;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  color: rgba(255, 248, 236, 0.52);
+  font-size: 0.84rem;
+}
+
+.cardModalBackdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(3, 4, 8, 0.76);
+  backdrop-filter: blur(10px);
+}
+
+.cardModal {
+  position: relative;
+  width: min(430px, 94vw);
+  max-height: 92vh;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid rgba(247, 199, 111, 0.36);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(30, 25, 25, 0.98), rgba(9, 10, 15, 0.98)),
+    #0d0f16;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.62);
+}
+
+.modalClose {
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  float: right;
+  min-height: 34px;
+  margin: 0 0 8px 8px;
+  padding: 0 12px;
+  border-radius: 999px;
+}
+
 @media (max-width: 920px) {
   .card {
     min-height: 525px;
@@ -1988,6 +2183,14 @@ button:disabled {
 }
 
 @media (max-width: 640px) {
+  .handsOverview {
+    grid-template-columns: 1fr;
+  }
+
+  .deploymentPanel .cardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .card {
     min-height: 500px;
   }
