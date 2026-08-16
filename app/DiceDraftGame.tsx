@@ -109,6 +109,7 @@ const REINFORCEMENT_ROUNDS = 2;
 const REINFORCEMENTS_PER_ROUND = 1;
 const BATTLE_HAND_SIZE = 6;
 const DEFAULT_SEED_TEXT = "playtest-01";
+const SPACE_CARD_COVER_ART = "/card-art/space/space-card-cover-v1.png";
 
 const SYMMETRIC_DECK_CARD_IDS = [
   "swift_blade",
@@ -1761,6 +1762,10 @@ export function SpaceCombatGame() {
             ещё 2 раунда подкреплений по 1 кораблю, а кубы идут в общий пул своего игрока.
           </p>
         </div>
+        <figure className="coverPreview">
+          <img alt="Космический арт обложки карт" src={SPACE_CARD_COVER_ART} />
+          <figcaption>обложка карт</figcaption>
+        </figure>
         <div className="seedBox">
           <label htmlFor="seed">Seed партии</label>
           <div>

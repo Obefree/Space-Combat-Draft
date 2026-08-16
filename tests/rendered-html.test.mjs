@@ -36,6 +36,7 @@ test("server-renders the Space Combat Draft shell", async () => {
   assert.match(html, /3 корабля на старт/);
   assert.match(html, /2 раунда подкреплений по 1/);
   assert.match(html, /общий пул своего игрока/);
+  assert.match(html, /\/card-art\/space\/space-card-cover-v1\.png/);
 });
 
 test("keeps the space combat rules encoded in source", async () => {
@@ -49,6 +50,7 @@ test("keeps the space combat rules encoded in source", async () => {
   assert.match(source, /const REINFORCEMENT_ROUNDS = 2;/);
   assert.match(source, /const REINFORCEMENTS_PER_ROUND = 1;/);
   assert.match(source, /const BATTLE_HAND_SIZE = 6;/);
+  assert.match(source, /const SPACE_CARD_COVER_ART = "\/card-art\/space\/space-card-cover-v1\.png";/);
   assert.match(source, /const SYMMETRIC_DECK_CARD_IDS = \[/);
   assert.match(source, /function makeRandomBattle\(cards: CardData\[\], seedText: string\): GameState/);
   assert.match(source, /hand: deckA\.slice\(0, BATTLE_HAND_SIZE\)/);
