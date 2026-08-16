@@ -1909,21 +1909,6 @@ button:disabled {
   font-size: 0.94rem;
 }
 
-.frameAttached {
-  display: flex;
-  min-height: 34px;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  margin: 0 3px 7px;
-  padding: 6px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.22);
-  color: rgba(255, 248, 236, 0.66);
-  font-size: 0.78rem;
-}
-
 .frameRules {
   display: grid;
   align-content: start;

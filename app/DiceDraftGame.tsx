@@ -1103,7 +1103,6 @@ function CardFrame({
   compact,
   hpText,
   healthPercent,
-  attached,
   children,
 }: {
   card: CardData;
@@ -1111,7 +1110,6 @@ function CardFrame({
   compact?: boolean;
   hpText: string;
   healthPercent?: number;
-  attached?: ReactNode;
   children?: ReactNode;
 }) {
   const flavor = dominantDie(card);
@@ -1133,7 +1131,6 @@ function CardFrame({
           <span>♥ {hpText}</span>
         </div>
       </div>
-      {attached ? <div className="frameAttached">{attached}</div> : null}
       {!compact ? <div className="frameRules">{children}</div> : null}
     </div>
   );
@@ -1223,7 +1220,6 @@ function CreatureCard({
         healthPercent={healthPercent}
         hpText={`${creature.hp}/${creature.card.health}`}
         owner={creature.owner}
-        attached={`Кубы в пуле ${PLAYERS[creature.owner].short}: ${ownerPool.length}`}
       >
         {creature.card.abilities.map((ability) => {
           const payment = findPayment(ownerPool, ability.cost);
