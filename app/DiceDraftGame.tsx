@@ -124,6 +124,142 @@ const SPACE_CARD_ART_BY_ID: Partial<Record<string, string>> = {
   transmuter: "/card-art/space/generated/transmuter.png",
 };
 
+const SPACE_CARD_THEME_BY_ID: Record<
+  string,
+  { name_ru: string; abilities: Record<string, { name_ru: string; text_ru: string }> }
+> = {
+  alchemist: {
+    name_ru: "Лаборатория «Алхимик»",
+    abilities: {
+      tuning: {
+        name_ru: "Калибровка реактора",
+        text_ru: "✦3: измени значение одного своего куба на ±1.",
+      },
+      catalyst: {
+        name_ru: "Катализатор поля",
+        text_ru: "✦+⚔5: нанеси 2 урона и измени значение одного куба в пуле на ±1.",
+      },
+    },
+  },
+  bastion: {
+    name_ru: "Орбитальный бастион",
+    abilities: {
+      fortify: {
+        name_ru: "Перезарядка щитов",
+        text_ru: "🛡3: восстанови себе 1 HP.",
+      },
+      shelter: {
+        name_ru: "Купол прикрытия",
+        text_ru: "🛡+✦5: другой союзный корабль восстанавливает 2 HP.",
+      },
+    },
+  },
+  bodyguard: {
+    name_ru: "Щитовой эскорт",
+    abilities: {
+      cover: {
+        name_ru: "Закрыть корпусом",
+        text_ru: "🛡3: союзник лечит 1 HP, Щитовой эскорт получает 1 урон.",
+      },
+      counter: {
+        name_ru: "Ответный залп",
+        text_ru: "🛡+⚔5: нанеси 1 урон врагу и вылечи союзника на 1 HP.",
+      },
+    },
+  },
+  huntress: {
+    name_ru: "Снайперский фрегат",
+    abilities: {
+      finish: {
+        name_ru: "Дальняя фиксация",
+        text_ru: "⚔4: нанеси 1 урон, либо 2 уже повреждённой цели.",
+      },
+      precise_shot: {
+        name_ru: "Рельсовый выстрел",
+        text_ru: "Сбрось два ⚔ разных значений суммой 5+: нанеси 3 урона повреждённой цели.",
+      },
+    },
+  },
+  mercenary_captain: {
+    name_ru: "Крейсер наёмников",
+    abilities: {
+      attack_order: {
+        name_ru: "Огневой приказ",
+        text_ru: "⚔4: нанеси 1 урон.",
+      },
+      coordination: {
+        name_ru: "Тактическая связка",
+        text_ru: "⚔+✦5: нанеси 2 урона, затем можешь перенести 1 свой куб на союзника.",
+      },
+    },
+  },
+  old_veteran: {
+    name_ru: "Старый дредноут",
+    abilities: {
+      measured_strike: {
+        name_ru: "Выверенный бортовой залп",
+        text_ru: "⚔4: нанеси 2 урона.",
+      },
+      last_stand: {
+        name_ru: "Последний протокол",
+        text_ru: "⚔+🛡+✦6: нанеси 3 урона врагу и восстанови себе 2 HP.",
+      },
+    },
+  },
+  paladin: {
+    name_ru: "Крейсер «Паладин»",
+    abilities: {
+      healing: {
+        name_ru: "Ремонтные дроны",
+        text_ru: "🛡4: восстанови 2 HP кораблю.",
+      },
+      smite: {
+        name_ru: "Карающий импульс",
+        text_ru: "🛡+⚔6: нанеси 2 урона врагу и вылечи союзника на 1 HP.",
+      },
+    },
+  },
+  raider: {
+    name_ru: "Корсарский рейдер",
+    abilities: {
+      strike: {
+        name_ru: "Пиратский залп",
+        text_ru: "⚔3: нанеси 1 урон.",
+      },
+      plunder: {
+        name_ru: "Захват ресурса",
+        text_ru: "⚔+🛡5: нанеси 2 урона и верни один куб значения 1 с цели в пул.",
+      },
+    },
+  },
+  swift_blade: {
+    name_ru: "Перехватчик «Клинок»",
+    abilities: {
+      cut: {
+        name_ru: "Быстрый прокол",
+        text_ru: "⚔3: нанеси 1 урон.",
+      },
+      first_strike: {
+        name_ru: "Первый заход",
+        text_ru: "⚔+✦5: нанеси 3 урона кораблю, на котором нет кубов.",
+      },
+    },
+  },
+  transmuter: {
+    name_ru: "Фазовый трансмутатор",
+    abilities: {
+      transmutation: {
+        name_ru: "Смена частоты",
+        text_ru: "✦3: поменяй тип одного своего куба, сохранив значение.",
+      },
+      mass_transmutation: {
+        name_ru: "Перенастройка эскадры",
+        text_ru: "✦+🛡5: поменяй тип до двух кубов на своих кораблях.",
+      },
+    },
+  },
+};
+
 const SYMMETRIC_DECK_CARD_IDS = [
   "swift_blade",
   "raider",
@@ -1151,6 +1287,20 @@ function dominantDie(card: CardData) {
     "attack") as DieType;
 }
 
+function applySpaceTheme(card: CardData): CardData {
+  const theme = SPACE_CARD_THEME_BY_ID[card.id];
+  if (!theme) return card;
+
+  return {
+    ...card,
+    name_ru: theme.name_ru,
+    abilities: card.abilities.map((ability) => ({
+      ...ability,
+      ...(theme.abilities[ability.id] ?? {}),
+    })),
+  };
+}
+
 function lightAbilityFor(card: CardData): Ability {
   const primary = dominantDie(card);
   const icon = DIE_META[primary].icon;
@@ -1158,8 +1308,8 @@ function lightAbilityFor(card: CardData): Ability {
   if (primary === "defense") {
     return {
       id: "light_guard",
-      name_ru: "Простая защита",
-      text_ru: `${icon}3: восстанови 1 HP себе или союзнику.`,
+      name_ru: "Аварийный щит",
+      text_ru: `${icon}3: восстанови 1 HP себе или союзному кораблю.`,
       cost: { threshold: 3, requirements: { defense: 1 } },
       effects: [{ type: "heal", amount: 1, target: "ally" }],
     };
@@ -1168,7 +1318,7 @@ function lightAbilityFor(card: CardData): Ability {
   if (primary === "magic") {
     return {
       id: "light_spark",
-      name_ru: "Простая искра",
+      name_ru: "Импульс реактора",
       text_ru: `${icon}3: нанеси 1 урон.`,
       cost: { threshold: 3, requirements: { magic: 1 } },
       effects: [{ type: "damage", amount: 1, target: "enemy" }],
@@ -1177,7 +1327,7 @@ function lightAbilityFor(card: CardData): Ability {
 
   return {
     id: "light_strike",
-    name_ru: "Простой удар",
+    name_ru: "Короткий залп",
     text_ru: `${icon}3: нанеси 1 урон.`,
     cost: { threshold: 3, requirements: { attack: 1 } },
     effects: [{ type: "damage", amount: 1, target: "enemy" }],
@@ -1185,10 +1335,10 @@ function lightAbilityFor(card: CardData): Ability {
 }
 
 function cardsForRulesMode(cards: CardData[], mode: RulesMode) {
-  if (mode === "full") return cards;
-  return cards.map((card) => ({
+  const themedCards = cards.map(applySpaceTheme);
+  if (mode === "full") return themedCards;
+  return themedCards.map((card) => ({
     ...card,
-    id: `${card.id}__light`,
     abilities: [lightAbilityFor(card)],
   }));
 }

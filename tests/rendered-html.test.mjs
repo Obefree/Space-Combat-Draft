@@ -52,6 +52,7 @@ test("keeps the space combat rules encoded in source", async () => {
   assert.match(source, /const BATTLE_HAND_SIZE = 6;/);
   assert.match(source, /const SPACE_CARD_COVER_ART = "\/card-art\/space\/space-card-cover-v1\.png";/);
   assert.match(source, /const SPACE_CARD_ART_BY_ID: Partial<Record<string, string>> = {/);
+  assert.match(source, /const SPACE_CARD_THEME_BY_ID: Record</);
   assert.match(source, /const SYMMETRIC_DECK_CARD_IDS = \[/);
   assert.match(source, /function makeRandomBattle\(cards: CardData\[\], seedText: string\): GameState/);
   assert.match(source, /hand: deckA\.slice\(0, BATTLE_HAND_SIZE\)/);
@@ -67,6 +68,39 @@ test("keeps the space combat rules encoded in source", async () => {
   assert.doesNotMatch(source, /deck_select/);
   assert.doesNotMatch(source, /selectedIds\.length !== 8/);
   assert.doesNotMatch(source, /личные кубы на каждой карте/);
+});
+
+test("uses space-themed names and abilities instead of legacy card flavor", async () => {
+  const source = await readFile(
+    new URL("../app/DiceDraftGame.tsx", import.meta.url),
+    "utf8",
+  );
+
+  for (const text of [
+    "Перехватчик «Клинок»",
+    "Корсарский рейдер",
+    "Снайперский фрегат",
+    "Крейсер наёмников",
+    "Орбитальный бастион",
+    "Щитовой эскорт",
+    "Крейсер «Паладин»",
+    "Лаборатория «Алхимик»",
+    "Фазовый трансмутатор",
+    "Старый дредноут",
+    "Калибровка реактора",
+    "Тактическая связка",
+    "Аварийный щит",
+    "Импульс реактора",
+    "Короткий залп",
+  ]) {
+    assert.match(source, new RegExp(text));
+  }
+
+  assert.match(source, /const themedCards = cards\.map\(applySpaceTheme\);/);
+  assert.doesNotMatch(source, /id: `\$\{card\.id\}__light`/);
+  assert.doesNotMatch(source, /Простая защита/);
+  assert.doesNotMatch(source, /Простая искра/);
+  assert.doesNotMatch(source, /Простой удар/);
 });
 
 test("has generated space art for each symmetric battle card", async () => {
