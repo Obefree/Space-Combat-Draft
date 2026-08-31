@@ -30,13 +30,13 @@ test("server-renders the Space Combat Draft shell", async () => {
 
   const html = await response.text();
   assert.match(html, /<title>Space Combat Draft — боевой прототип<\/title>/);
-  assert.match(html, /Космическая боевая система/);
+  assert.match(html, /<h1>Space Combat Draft<\/h1>/);
   assert.match(html, /10 карт в колоде/);
   assert.match(html, /случайно берутся 6 в руку/);
   assert.match(html, /3 корабля на старт/);
   assert.match(html, /2 раунда подкреплений по 1/);
   assert.match(html, /общий пул своего игрока/);
-  assert.match(html, /\/card-art\/space\/space-card-cover-v1\.png/);
+  assert.match(html, /корабль завершает активацию до следующего раунда/);
 });
 
 test("keeps the space combat rules encoded in source", async () => {
@@ -50,9 +50,9 @@ test("keeps the space combat rules encoded in source", async () => {
   assert.match(source, /const REINFORCEMENT_ROUNDS = 2;/);
   assert.match(source, /const REINFORCEMENTS_PER_ROUND = 1;/);
   assert.match(source, /const BATTLE_HAND_SIZE = 6;/);
-  assert.match(source, /const SPACE_CARD_COVER_ART = "\/card-art\/space\/space-card-cover-v1\.png";/);
   assert.match(source, /const SPACE_CARD_ART_BY_ID: Partial<Record<string, string>> = {/);
-  assert.match(source, /const SPACE_CARD_THEME_BY_ID: Record</);
+  assert.match(source, /type SpaceCardTheme = Partial/);
+  assert.match(source, /const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme>/);
   assert.match(source, /const SYMMETRIC_DECK_CARD_IDS = \[/);
   assert.match(source, /function makeRandomBattle\(cards: CardData\[\], seedText: string\): GameState/);
   assert.match(source, /hand: deckA\.slice\(0, BATTLE_HAND_SIZE\)/);
@@ -63,6 +63,7 @@ test("keeps the space combat rules encoded in source", async () => {
   assert.match(source, /function CardInspectModal/);
   assert.match(source, /pools: Record<PlayerId, Die\[]>;/);
   assert.match(source, /deployOneCreature\(nextState, playerId, card, pools\)/);
+  assert.match(source, /return advanceActivation\(resolvedState\);/);
   assert.doesNotMatch(source, /needsDie:\s*true/);
   assert.doesNotMatch(source, /type Phase = "loading" \| "draft"/);
   assert.doesNotMatch(source, /deck_select/);
@@ -78,17 +79,18 @@ test("uses space-themed names and abilities instead of legacy card flavor", asyn
 
   for (const text of [
     "Перехватчик «Клинок»",
-    "Корсарский рейдер",
+    "Корсар-похититель",
     "Снайперский фрегат",
-    "Крейсер наёмников",
-    "Орбитальный бастион",
-    "Щитовой эскорт",
-    "Крейсер «Паладин»",
-    "Лаборатория «Алхимик»",
-    "Фазовый трансмутатор",
-    "Старый дредноут",
-    "Калибровка реактора",
-    "Тактическая связка",
+    "Командный крейсер",
+    "Бастион-накопитель",
+    "Эскорт перехвата",
+    "Ремонтный крейсер",
+    "Реакторная лаборатория",
+    "Фазовый нарушитель",
+    "Осадный дредноут",
+    "Разгон контура",
+    "Грабёж конвоя",
+    "Осадный протокол",
     "Аварийный щит",
     "Импульс реактора",
     "Короткий залп",
@@ -96,6 +98,9 @@ test("uses space-themed names and abilities instead of legacy card flavor", asyn
     assert.match(source, new RegExp(text));
   }
 
+  assert.match(source, /steal_enemy_die/);
+  assert.match(source, /gain_die/);
+  assert.match(source, /damage_all_enemies/);
   assert.match(source, /const themedCards = cards\.map\(applySpaceTheme\);/);
   assert.doesNotMatch(source, /id: `\$\{card\.id\}__light`/);
   assert.doesNotMatch(source, /Простая защита/);

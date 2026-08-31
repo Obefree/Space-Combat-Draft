@@ -20,6 +20,7 @@ type Effect = {
   type: string;
   amount?: number;
   target?: string;
+  die_type?: DieType;
   condition?: string;
   bonus_amount?: number;
   override_amount?: number;
@@ -123,137 +124,243 @@ const SPACE_CARD_ART_BY_ID: Partial<Record<string, string>> = {
   transmuter: "/card-art/space/generated/transmuter.png",
 };
 
-const SPACE_CARD_THEME_BY_ID: Record<
-  string,
-  { name_ru: string; abilities: Record<string, { name_ru: string; text_ru: string }> }
-> = {
+type SpaceCardTheme = Partial<Pick<CardData, "initiative" | "health" | "glory" | "dice">> & {
+  name_ru: string;
+  abilities: Record<string, Partial<Pick<Ability, "name_ru" | "text_ru" | "cost" | "effects">>>;
+};
+
+const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme> = {
   alchemist: {
-    name_ru: "Лаборатория «Алхимик»",
+    name_ru: "Реакторная лаборатория",
+    initiative: 5,
+    health: 4,
+    glory: 3,
+    dice: ["magic", "magic", "magic", "defense"],
     abilities: {
       tuning: {
-        name_ru: "Калибровка реактора",
-        text_ru: "✦3: измени значение одного своего куба на ±1.",
+        name_ru: "Разгон контура",
+        text_ru: "✦3: добавь ✦2 в свой пул.",
+        cost: { threshold: 3, requirements: { magic: 1 } },
+        effects: [{ type: "gain_die", die_type: "magic", amount: 2 }],
       },
       catalyst: {
-        name_ru: "Катализатор поля",
-        text_ru: "✦+⚔5: нанеси 2 урона и измени значение одного куба в пуле на ±1.",
+        name_ru: "Переплавка заряда",
+        text_ru: "✦+🛡5: измени свой худший куб на +1, максимум до 3.",
+        cost: { threshold: 5, requirements: { magic: 1, defense: 1 } },
+        effects: [{ type: "increase_target_ally_die", amount: 1, max: 3 }],
       },
     },
   },
   bastion: {
-    name_ru: "Орбитальный бастион",
+    name_ru: "Бастион-накопитель",
+    initiative: 1,
+    health: 9,
+    glory: 5,
+    dice: ["defense", "defense", "defense", "magic"],
     abilities: {
       fortify: {
-        name_ru: "Перезарядка щитов",
-        text_ru: "🛡3: восстанови себе 1 HP.",
+        name_ru: "Зарядить батареи",
+        text_ru: "🛡3: добавь 🛡2 в свой пул.",
+        cost: { threshold: 3, requirements: { defense: 1 } },
+        effects: [{ type: "gain_die", die_type: "defense", amount: 2 }],
       },
       shelter: {
-        name_ru: "Купол прикрытия",
-        text_ru: "🛡+✦5: другой союзный корабль восстанавливает 2 HP.",
+        name_ru: "Грави-щит эскадры",
+        text_ru: "🛡+✦7: два союзных корабля восстанавливают по 2 HP.",
+        cost: { threshold: 7, requirements: { defense: 1, magic: 1 } },
+        effects: [{ type: "heal_two_allies", amount: 2 }],
       },
     },
   },
   bodyguard: {
-    name_ru: "Щитовой эскорт",
+    name_ru: "Эскорт перехвата",
+    initiative: 7,
+    health: 5,
+    glory: 2,
+    dice: ["defense", "defense", "attack"],
     abilities: {
       cover: {
-        name_ru: "Закрыть корпусом",
-        text_ru: "🛡3: союзник лечит 1 HP, Щитовой эскорт получает 1 урон.",
+        name_ru: "Закрыть сектор",
+        text_ru: "🛡3: союзник лечит 2 HP, Эскорт получает 1 самоурон.",
+        cost: { threshold: 3, requirements: { defense: 1 } },
+        effects: [
+          { type: "heal", amount: 2, target: "ally_other" },
+          { type: "self_damage", amount: 1 },
+        ],
       },
       counter: {
-        name_ru: "Ответный залп",
-        text_ru: "🛡+⚔5: нанеси 1 урон врагу и вылечи союзника на 1 HP.",
+        name_ru: "Перехват ракеты",
+        text_ru: "🛡+⚔5: нанеси 1 урон и укради у врага куб значения 2 или ниже.",
+        cost: { threshold: 5, requirements: { defense: 1, attack: 1 } },
+        effects: [
+          { type: "damage", amount: 1, target: "enemy" },
+          { type: "steal_enemy_die", value_max: 2, count: 1 },
+        ],
       },
     },
   },
   huntress: {
     name_ru: "Снайперский фрегат",
+    initiative: 8,
+    health: 3,
+    glory: 3,
+    dice: ["attack", "attack", "attack", "magic"],
     abilities: {
       finish: {
-        name_ru: "Дальняя фиксация",
-        text_ru: "⚔4: нанеси 1 урон, либо 2 уже повреждённой цели.",
+        name_ru: "Маркер уязвимости",
+        text_ru: "⚔4: нанеси 1 урон, либо 3 уже повреждённой цели.",
+        cost: { threshold: 4, requirements: { attack: 1 } },
+        effects: [{ type: "damage", amount: 1, target: "enemy", bonus_amount: 2, condition: "target_damaged" }],
       },
       precise_shot: {
-        name_ru: "Рельсовый выстрел",
-        text_ru: "Сбрось два ⚔ разных значений суммой 5+: нанеси 3 урона повреждённой цели.",
+        name_ru: "Игла через броню",
+        text_ru: "Сбрось два ⚔ разных значений суммой 5+: нанеси 4 урона повреждённой цели.",
+        cost: { threshold: 5, requirements: { attack: 2 }, exact_dice: 2, different_values: true },
+        effects: [{ type: "damage", amount: 4, target: "enemy", condition: "target_damaged" }],
       },
     },
   },
   mercenary_captain: {
-    name_ru: "Крейсер наёмников",
+    name_ru: "Командный крейсер",
+    initiative: 4,
+    health: 6,
+    glory: 4,
+    dice: ["attack", "defense", "magic", "magic"],
     abilities: {
       attack_order: {
-        name_ru: "Огневой приказ",
-        text_ru: "⚔4: нанеси 1 урон.",
+        name_ru: "Скоординированный залп",
+        text_ru: "⚔4: нанеси 1 урон и добавь ⚔1 в свой пул.",
+        cost: { threshold: 4, requirements: { attack: 1 } },
+        effects: [
+          { type: "damage", amount: 1, target: "enemy" },
+          { type: "gain_die", die_type: "attack", amount: 1 },
+        ],
       },
       coordination: {
-        name_ru: "Тактическая связка",
-        text_ru: "⚔+✦5: нанеси 2 урона, затем можешь перенести 1 свой куб на союзника.",
+        name_ru: "Приказ на прорыв",
+        text_ru: "⚔+✦6: нанеси 2 урона и увеличь свой самый слабый куб на 1.",
+        cost: { threshold: 6, requirements: { attack: 1, magic: 1 } },
+        effects: [
+          { type: "damage", amount: 2, target: "enemy" },
+          { type: "increase_target_ally_die", amount: 1, max: 3 },
+        ],
       },
     },
   },
   old_veteran: {
-    name_ru: "Старый дредноут",
+    name_ru: "Осадный дредноут",
+    initiative: 2,
+    health: 7,
+    glory: 5,
+    dice: ["attack", "attack", "defense", "magic"],
     abilities: {
       measured_strike: {
-        name_ru: "Выверенный бортовой залп",
-        text_ru: "⚔4: нанеси 2 урона.",
+        name_ru: "Тяжёлый борт",
+        text_ru: "⚔5: нанеси 2 урона.",
+        cost: { threshold: 5, requirements: { attack: 1 } },
+        effects: [{ type: "damage", amount: 2, target: "enemy" }],
       },
       last_stand: {
-        name_ru: "Последний протокол",
-        text_ru: "⚔+🛡+✦6: нанеси 3 урона врагу и восстанови себе 2 HP.",
+        name_ru: "Осадный протокол",
+        text_ru: "⚔+🛡+✦9: нанеси 6 урона врагу. Нужно копить пул.",
+        cost: { threshold: 9, requirements: { attack: 1, defense: 1, magic: 1 } },
+        effects: [{ type: "damage", amount: 6, target: "enemy" }],
       },
     },
   },
   paladin: {
-    name_ru: "Крейсер «Паладин»",
+    name_ru: "Ремонтный крейсер",
+    initiative: 3,
+    health: 6,
+    glory: 4,
+    dice: ["defense", "defense", "defense", "attack"],
     abilities: {
       healing: {
         name_ru: "Ремонтные дроны",
-        text_ru: "🛡4: восстанови 2 HP кораблю.",
+        text_ru: "🛡4: восстанови 3 HP кораблю.",
+        cost: { threshold: 4, requirements: { defense: 1 } },
+        effects: [{ type: "heal", amount: 3, target: "ally" }],
       },
       smite: {
-        name_ru: "Карающий импульс",
-        text_ru: "🛡+⚔6: нанеси 2 урона врагу и вылечи союзника на 1 HP.",
+        name_ru: "Боевой ремонт",
+        text_ru: "🛡+⚔6: нанеси 2 урона врагу и вылечи союзника на 2 HP.",
+        cost: { threshold: 6, requirements: { defense: 1, attack: 1 } },
+        effects: [
+          { type: "damage", amount: 2, target: "enemy" },
+          { type: "heal", amount: 2, target: "ally" },
+        ],
       },
     },
   },
   raider: {
-    name_ru: "Корсарский рейдер",
+    name_ru: "Корсар-похититель",
+    initiative: 7,
+    health: 4,
+    glory: 2,
+    dice: ["attack", "attack", "defense"],
     abilities: {
       strike: {
-        name_ru: "Пиратский залп",
-        text_ru: "⚔3: нанеси 1 урон.",
+        name_ru: "Абордажный крюк",
+        text_ru: "⚔3: укради у врага куб значения 1 или ниже.",
+        cost: { threshold: 3, requirements: { attack: 1 } },
+        effects: [{ type: "steal_enemy_die", value_max: 1, count: 1 }],
       },
       plunder: {
-        name_ru: "Захват ресурса",
-        text_ru: "⚔+🛡5: нанеси 2 урона и верни один куб значения 1 с цели в пул.",
+        name_ru: "Грабёж конвоя",
+        text_ru: "⚔+🛡5: нанеси 2 урона и укради у врага куб значения 2 или ниже.",
+        cost: { threshold: 5, requirements: { attack: 1, defense: 1 } },
+        effects: [
+          { type: "damage", amount: 2, target: "enemy" },
+          { type: "steal_enemy_die", value_max: 2, count: 1 },
+        ],
       },
     },
   },
   swift_blade: {
     name_ru: "Перехватчик «Клинок»",
+    initiative: 9,
+    health: 3,
+    glory: 2,
+    dice: ["attack", "attack", "attack", "magic"],
     abilities: {
       cut: {
-        name_ru: "Быстрый прокол",
-        text_ru: "⚔3: нанеси 1 урон.",
+        name_ru: "Первый контакт",
+        text_ru: "⚔3: нанеси 1 урон и уменьши сильный куб врага на 1.",
+        cost: { threshold: 3, requirements: { attack: 1 } },
+        effects: [
+          { type: "damage", amount: 1, target: "enemy" },
+          { type: "decrease_target_die", amount: 1, min: 1 },
+        ],
       },
       first_strike: {
-        name_ru: "Первый заход",
-        text_ru: "⚔+✦5: нанеси 3 урона кораблю, на котором нет кубов.",
+        name_ru: "Пробой щита",
+        text_ru: "⚔+✦5: нанеси 3 урона цели, если в пуле врага нет кубов.",
+        cost: { threshold: 5, requirements: { attack: 1, magic: 1 } },
+        effects: [{ type: "damage", amount: 3, target: "enemy", condition: "target_has_no_dice" }],
       },
     },
   },
   transmuter: {
-    name_ru: "Фазовый трансмутатор",
+    name_ru: "Фазовый нарушитель",
+    initiative: 6,
+    health: 4,
+    glory: 3,
+    dice: ["magic", "magic", "attack", "defense"],
     abilities: {
       transmutation: {
-        name_ru: "Смена частоты",
-        text_ru: "✦3: поменяй тип одного своего куба, сохранив значение.",
+        name_ru: "Глушение частоты",
+        text_ru: "✦3: уменьши сильный куб врага на 1.",
+        cost: { threshold: 3, requirements: { magic: 1 } },
+        effects: [{ type: "decrease_target_die", amount: 1, min: 1 }],
       },
       mass_transmutation: {
-        name_ru: "Перенастройка эскадры",
-        text_ru: "✦+🛡5: поменяй тип до двух кубов на своих кораблях.",
+        name_ru: "Разрыв построения",
+        text_ru: "✦+🛡7: нанеси 1 урон всем вражеским кораблям и сбрось один вражеский куб 2 или ниже.",
+        cost: { threshold: 7, requirements: { magic: 1, defense: 1 } },
+        effects: [
+          { type: "damage_all_enemies", amount: 1 },
+          { type: "return_target_die_to_pool", value_max: 2 },
+        ],
       },
     },
   },
@@ -761,6 +868,9 @@ function abilityPrimaryObject(ability: Ability) {
         "return_target_die_to_pool",
         "decrease_target_die",
         "increase_target_ally_die",
+        "steal_enemy_die",
+        "gain_die",
+        "damage_all_enemies",
       ].includes(effect.type),
     )
   ) {
@@ -854,6 +964,10 @@ function bestDieForReturn(dice: Die[], valueMax: number) {
     })[0];
 }
 
+function bestDieForSteal(dice: Die[], valueMax: number) {
+  return bestDieForReturn(dice, valueMax);
+}
+
 function updatePoolDie(
   pools: Record<PlayerId, Die[]>,
   playerId: PlayerId,
@@ -890,6 +1004,7 @@ function resolveAbility(
   const spentIds = new Set(payment.map((die) => die.id));
   removePoolDice(pools, actor.owner, spentIds);
   let players = state.players;
+  let nextDieNumber = state.nextDieNumber;
   const actorAfterPayment = getCreature(players, actor.id) ?? actor;
   const log = [
     `${actor.card.name_ru} платит ${formatDiceList(payment)} за «${ability.name_ru}».`,
@@ -1002,8 +1117,59 @@ function resolveAbility(
       continue;
     }
 
+    if (effect.type === "gain_die") {
+      const dieType = effect.die_type ?? "magic";
+      const value = Math.min(3, Math.max(1, effect.amount ?? 1));
+      const die: Die = {
+        id: `d${nextDieNumber}`,
+        type: dieType,
+        value,
+      };
+      nextDieNumber += 1;
+      pools[actor.owner].push(die);
+      log.unshift(`${PLAYERS[actor.owner].name} получает заряд ${DIE_META[dieType].icon}${value} в пул.`);
+      continue;
+    }
+
+    if (effect.type === "steal_enemy_die") {
+      const valueMax = effect.value_max ?? 3;
+      const count = effect.count ?? 1;
+      const enemyId: PlayerId = actor.owner === "A" ? "B" : "A";
+      for (let index = 0; index < count; index += 1) {
+        const dieToSteal = bestDieForSteal(pools[enemyId], valueMax);
+        if (!dieToSteal) {
+          log.unshift(`В пуле врага нет куба значения ${valueMax} или ниже для кражи.`);
+          break;
+        }
+        removePoolDice(pools, enemyId, new Set([dieToSteal.id]));
+        pools[actor.owner].push(dieToSteal);
+        log.unshift(
+          `${actor.card.name_ru} крадёт ${DIE_META[dieToSteal.type].icon}${dieToSteal.value} из пула ${PLAYERS[enemyId].short}.`,
+        );
+      }
+      continue;
+    }
+
     if (effect.type === "move_own_die_to_ally") {
       log.unshift("Кубы уже находятся в общем пуле игрока — перенос между союзниками не нужен.");
+      continue;
+    }
+
+    if (effect.type === "damage_all_enemies") {
+      const amount = effect.amount ?? 0;
+      const targets = livingCreatures(players).filter((creature) => creature.owner !== actor.owner);
+      if (!targets.length) {
+        log.unshift("Нет вражеских целей для массового урона — эффект пропущен.");
+        continue;
+      }
+      for (const target of targets) {
+        players = updateCreature(players, target.id, (creature) => ({
+          ...creature,
+          hp: Math.max(0, creature.hp - amount),
+        }));
+      }
+      log.unshift(`Все вражеские корабли получают ${amount} урона.`);
+      players = cleanupDeaths(players, log);
       continue;
     }
 
@@ -1083,15 +1249,20 @@ function resolveAbility(
     log.unshift(`Сложный эффект «${effect.type}» пока оставлен как текст правила.`);
   }
 
-  return {
+  const resolvedState = {
     ...state,
+    nextDieNumber,
     players,
     battle: {
       ...state.battle,
       pools,
-      log: log.slice(0, 24),
+      log: [
+        `${actor.card.name_ru} завершает активацию после применения способности.`,
+        ...log,
+      ].slice(0, 24),
     },
   };
+  return advanceActivation(resolvedState);
 }
 
 function startNextRoundOrDeployment(state: GameState): GameState {
@@ -1253,6 +1424,32 @@ function abilityImpactBadges(ability: Ability) {
       continue;
     }
 
+    if (effect.type === "gain_die") {
+      badges.push({ kind: "control", label: `+${DIE_META[effect.die_type ?? "magic"].icon}${effect.amount ?? 1}` });
+      continue;
+    }
+
+    if (effect.type === "steal_enemy_die") {
+      badges.push({ kind: "control", label: "Кража куба" });
+      continue;
+    }
+
+    if (effect.type === "damage_all_enemies") {
+      badges.push({ kind: "damage", label: `Всем ${effect.amount ?? 0}` });
+      continue;
+    }
+
+    if (
+      [
+        "return_target_die_to_pool",
+        "decrease_target_die",
+        "increase_target_ally_die",
+      ].includes(effect.type)
+    ) {
+      badges.push({ kind: "control", label: "Кубы" });
+      continue;
+    }
+
     if (effect.type === "self_damage") {
       badges.push({ kind: "self", label: `Себе ${effect.amount ?? 0}` });
     }
@@ -1292,6 +1489,10 @@ function applySpaceTheme(card: CardData): CardData {
 
   return {
     ...card,
+    initiative: theme.initiative ?? card.initiative,
+    health: theme.health ?? card.health,
+    glory: theme.glory ?? card.glory,
+    dice: theme.dice ?? card.dice,
     name_ru: theme.name_ru,
     abilities: card.abilities.map((ability) => ({
       ...ability,
@@ -1678,6 +1879,7 @@ function RulesGuide() {
               <li>Нажми “новая битва”, чтобы получить новую случайную руку из 6 карт.</li>
               <li>Для простой партии включи Light mode.</li>
               <li>Меняй seed, чтобы повторять или сравнивать конкретную раздачу.</li>
+              <li>После применения способности корабль завершает активацию до следующего раунда.</li>
             </ol>
           </article>
           <article>
@@ -2107,7 +2309,7 @@ export function SpaceCombatGame() {
                     ? "Кубы уже находятся в пуле владельца активного корабля."
                     : activeAbility
                       ? `Выбрана «${activeAbility.name_ru}». Перетащи её на карту или тапни по цели.`
-                      : "Готовые способности видны на активном корабле, если в пуле его игрока хватает кубов. Перетащи способность на цель или тапни способность, потом цель."}
+                      : "Готовые способности видны на активном корабле, если в пуле его игрока хватает кубов. Одна способность завершает активацию корабля до следующего раунда."}
                 </p>
                 <div className="abilityActions">
                   <button type="button" className="secondary" onClick={skipActive}>
@@ -2229,8 +2431,8 @@ export function SpaceCombatGame() {
             <details>
               <summary>Допущения</summary>
               <ul>
-                <li>Сложные эффекты движения/кражи/изменения кубов пока не исполняются.</li>
-                <li>Можно применить несколько способностей за одну активацию, если хватает кубов.</li>
+                <li>Кража, сброс, усиление и генерация кубов работают через общие пулы игроков.</li>
+                <li>Одна способность завершает активацию корабля до следующего раунда.</li>
                 <li>Кубы погибшего существа удаляются из игры.</li>
                 <li>Финальная ничья инициативы решается стабильным порядком A/B + id карты.</li>
               </ul>
