@@ -2247,3 +2247,769 @@ button:disabled {
     min-height: 372px;
   }
 }
+
+/* Modern game UI pass. */
+:root {
+  --bg: #070a10;
+  --panel: rgba(10, 15, 24, 0.76);
+  --panel-strong: rgba(17, 25, 38, 0.9);
+  --text: #f4f7fb;
+  --muted: #9eabba;
+  --line: rgba(133, 183, 212, 0.22);
+  --gold: #ffd166;
+  --attack: #ff5f6d;
+  --defense: #4cc9f0;
+  --magic: #a98bff;
+  --shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+}
+
+html {
+  background: #070a10;
+}
+
+body {
+  background:
+    radial-gradient(circle at 18% 6%, rgba(76, 201, 240, 0.22), transparent 32rem),
+    radial-gradient(circle at 86% 8%, rgba(255, 95, 109, 0.18), transparent 28rem),
+    linear-gradient(180deg, #070a10 0%, #0b111b 52%, #06070b 100%);
+  font-family:
+    Inter, "Segoe UI", Roboto, Arial, ui-sans-serif, system-ui, sans-serif;
+  text-rendering: geometricPrecision;
+}
+
+body::before {
+  background:
+    linear-gradient(180deg, rgba(5, 8, 14, 0.62), rgba(5, 8, 14, 0.92)),
+    url("/card-art/space/space-card-cover-v1.png") center 16% / cover no-repeat;
+  opacity: 0.32;
+  filter: saturate(0.82) contrast(1.08);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(124, 232, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 232, 255, 0.035) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.95), transparent 82%);
+}
+
+button,
+input {
+  letter-spacing: 0;
+}
+
+button {
+  min-height: 42px;
+  border: 1px solid rgba(255, 209, 102, 0.5);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, #ffe08a, #d99532);
+  box-shadow:
+    0 10px 24px rgba(255, 177, 69, 0.16),
+    inset 0 1px rgba(255, 255, 255, 0.45);
+  color: #15110a;
+  line-height: 1.1;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(255, 234, 169, 0.85);
+}
+
+button:focus-visible,
+input:focus-visible,
+[role="button"]:focus-visible {
+  outline: 3px solid rgba(76, 201, 240, 0.44);
+  outline-offset: 2px;
+}
+
+.shell {
+  width: min(1440px, 100%);
+  padding: 16px;
+}
+
+.battleShell {
+  padding: 10px;
+}
+
+.hero,
+.panel,
+.scoreBar,
+.rulesGuide details {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(15, 24, 37, 0.86), rgba(8, 12, 20, 0.74)),
+    rgba(8, 12, 19, 0.72);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(22px);
+}
+
+.hero {
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+}
+
+.battleShell .hero {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  padding: 14px;
+  border-radius: 14px;
+}
+
+.hero > div:first-child {
+  display: grid;
+  gap: 12px;
+}
+
+.hero h1,
+.battleShell .hero h1,
+.phaseHead h2,
+.frameTitle strong,
+.cardTop strong,
+.creatureName strong,
+.abilityLineHead b,
+.abilityChip b {
+  font-family:
+    Inter, "Segoe UI", Roboto, Arial, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
+}
+
+.hero h1 {
+  max-width: none;
+  font-size: 4rem;
+  line-height: 0.95;
+}
+
+.battleShell .hero h1 {
+  font-size: 2rem;
+}
+
+.hero p {
+  max-width: 780px;
+  margin: 0;
+  color: #c3cfda;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #7ce8ff;
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.heroMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  max-width: 620px;
+}
+
+.heroMetrics span {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(124, 232, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.heroMetrics strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--text);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.seedBox {
+  border-color: rgba(124, 232, 255, 0.18);
+  border-radius: 12px;
+  background: rgba(3, 7, 13, 0.48);
+}
+
+.seedBox div {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.seedBox input:not([type="range"]) {
+  grid-column: 1 / -1;
+  min-height: 42px;
+  border-color: rgba(124, 232, 255, 0.24);
+  border-radius: 10px;
+  background: rgba(2, 6, 12, 0.72);
+  padding: 0 12px;
+}
+
+.seedBox button,
+.phaseHead button {
+  min-width: 0;
+  padding: 0 12px;
+  font-size: 0.86rem;
+}
+
+.seedBox .quickBattle {
+  background: linear-gradient(180deg, #7ff0c2, #2aa86f);
+}
+
+.seedBox .modeToggle {
+  border-color: rgba(169, 139, 255, 0.45);
+  background: linear-gradient(180deg, #b9a4ff, #5c7df5);
+  color: #090b16;
+}
+
+.modeHint,
+.scaleControl {
+  color: #aebaca;
+}
+
+.scaleControl {
+  grid-template-columns: auto minmax(130px, 1fr) 46px;
+}
+
+.rulesGuide {
+  margin: 12px 0;
+}
+
+.rulesGuide details {
+  overflow: clip;
+}
+
+.rulesGuide summary {
+  min-height: 50px;
+  padding: 12px 14px;
+}
+
+.rulesGuide summary::after,
+.pill,
+.axis span,
+.axis i,
+.scoreBar div,
+.rulesGrid article,
+.pool,
+.poolGroup,
+.actionBox,
+.notes details,
+.handRow,
+.emptyHand {
+  border-radius: 10px;
+}
+
+.rulesGuide summary::after {
+  width: 30px;
+  height: 30px;
+}
+
+.rulesGrid {
+  gap: 8px;
+}
+
+.rulesGrid article {
+  min-height: 0;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.scoreBar {
+  margin: 12px 0;
+  padding: 8px;
+}
+
+.scoreBar div {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.scoreBar strong {
+  color: #edf4ff;
+  text-align: right;
+}
+
+.panel {
+  padding: 16px;
+}
+
+.phaseHead {
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.phaseHead h2 {
+  font-size: 2rem;
+  line-height: 1.08;
+}
+
+.cardGrid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.deploymentPanel .cardGrid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  align-items: start;
+}
+
+.card,
+.creature,
+.miniHandCard {
+  border-radius: 12px;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+}
+
+.card.attack,
+.creature.attack,
+.miniHandCard.attack {
+  background:
+    linear-gradient(180deg, rgba(255, 95, 109, 0.24), rgba(9, 12, 19, 0.94)),
+    #11151f;
+}
+
+.card.defense,
+.creature.defense,
+.miniHandCard.defense {
+  background:
+    linear-gradient(180deg, rgba(76, 201, 240, 0.22), rgba(9, 12, 19, 0.94)),
+    #11151f;
+}
+
+.card.magic,
+.creature.magic,
+.miniHandCard.magic {
+  background:
+    linear-gradient(180deg, rgba(169, 139, 255, 0.24), rgba(9, 12, 19, 0.94)),
+    #11151f;
+}
+
+.card:hover:not(:disabled),
+.miniHandCard:hover,
+.creature:hover {
+  transform: translateY(-2px);
+  border-color: rgba(124, 232, 255, 0.36);
+  box-shadow:
+    0 22px 52px rgba(0, 0, 0, 0.48),
+    0 0 0 1px rgba(124, 232, 255, 0.12);
+}
+
+.card.selected {
+  outline: 0;
+  border-color: rgba(255, 209, 102, 0.95);
+  box-shadow:
+    0 0 0 3px rgba(255, 209, 102, 0.2),
+    0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.card {
+  min-height: 520px;
+  padding: 6px;
+}
+
+.card.compact {
+  min-height: 380px;
+}
+
+.frameHero {
+  min-height: 312px;
+  margin-bottom: 22px;
+}
+
+.cardFrame.compact .frameHero {
+  min-height: 292px;
+}
+
+.frameArt,
+.creature .frameArt,
+.cardArt,
+.creatureArt {
+  border-color: rgba(124, 232, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.frameArt::after {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 0 48%, rgba(0, 0, 0, 0.38) 72%, rgba(0, 0, 0, 0.78) 100%),
+    radial-gradient(circle at 50% 8%, rgba(124, 232, 255, 0.16), transparent 34%);
+}
+
+.frameDiceRail {
+  width: 52px;
+  border-color: rgba(124, 232, 255, 0.24);
+  border-radius: 10px;
+  background: rgba(3, 7, 13, 0.82);
+}
+
+.frameDiceBadge,
+.frameStat,
+.frameOwner,
+.frameTitle,
+.frameHp,
+.frameRules,
+.abilityChip,
+.impactBadge,
+.poolDie,
+.die {
+  border-radius: 8px;
+}
+
+.frameStat,
+.frameOwner,
+.frameHp span {
+  font-family:
+    Inter, "Segoe UI", Roboto, Arial, ui-sans-serif, system-ui, sans-serif;
+}
+
+.frameStat,
+.frameOwner {
+  min-width: 54px;
+  min-height: 44px;
+  border-color: rgba(124, 232, 255, 0.24);
+  background: rgba(3, 7, 13, 0.78);
+  color: #ffe08a;
+}
+
+.frameOwner {
+  min-width: 34px;
+  min-height: 30px;
+  background: #ffd166;
+  color: #11151f;
+}
+
+.frameTitle {
+  right: 68px;
+  left: 68px;
+  border-color: rgba(124, 232, 255, 0.16);
+  background: rgba(4, 8, 14, 0.76);
+  backdrop-filter: blur(10px);
+}
+
+.frameTitle strong {
+  color: #f4f7fb;
+  font-size: 1.18rem;
+}
+
+.frameTitle small {
+  color: rgba(124, 232, 255, 0.82);
+  letter-spacing: 0;
+}
+
+.frameHp {
+  bottom: -11px;
+  width: 86px;
+  height: 42px;
+  border-color: rgba(255, 95, 109, 0.58);
+  background: rgba(23, 7, 13, 0.9);
+}
+
+.frameHp span {
+  color: #fff1a8;
+  font-size: 1.08rem;
+}
+
+.frameRules {
+  min-height: 164px;
+  padding: 17px 12px 12px;
+  background: rgba(4, 8, 14, 0.76);
+}
+
+.frameRules p {
+  font-size: 0.84rem;
+}
+
+.abilityLineHead {
+  align-items: center;
+}
+
+.impactBadge {
+  min-height: 20px;
+  padding: 0 6px;
+  letter-spacing: 0;
+}
+
+.battleGrid {
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: start;
+  gap: 12px;
+}
+
+.battlePanel {
+  min-width: 0;
+}
+
+.pool {
+  margin-bottom: 12px;
+  background: rgba(3, 7, 13, 0.42);
+}
+
+.poolGroups {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.poolGroup {
+  min-height: 96px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.poolGroupHead strong {
+  font-size: 0.82rem;
+}
+
+.poolGroupHead span {
+  border-radius: 8px;
+  background: rgba(3, 7, 13, 0.66);
+}
+
+.poolDie,
+.die {
+  min-width: 42px;
+  min-height: 38px;
+  color: #081018;
+}
+
+.actionBox {
+  background:
+    linear-gradient(135deg, rgba(255, 209, 102, 0.12), rgba(76, 201, 240, 0.07)),
+    rgba(3, 7, 13, 0.42);
+}
+
+.abilityActions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.abilityActions button {
+  min-height: 50px;
+  border-radius: 10px;
+}
+
+.abilityActions .secondary {
+  border-color: rgba(124, 232, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.initiativeLine {
+  grid-auto-columns: minmax(222px, 248px);
+  gap: 12px;
+}
+
+.initiativeColumn {
+  grid-template-rows: minmax(330px, auto) 38px minmax(330px, auto);
+}
+
+.slot {
+  min-height: 330px;
+  border-color: rgba(124, 232, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.axis {
+  grid-template-columns: 38px 1fr;
+}
+
+.axis span,
+.axis i {
+  min-height: 34px;
+  background: rgba(3, 7, 13, 0.78);
+}
+
+.creature {
+  min-height: 360px;
+  padding: 6px;
+}
+
+.creature .frameHero {
+  min-height: 168px;
+  margin-bottom: 15px;
+}
+
+.creature .frameTitle {
+  right: 45px;
+  left: 45px;
+}
+
+.creature .frameTitle strong {
+  font-size: 0.78rem;
+}
+
+.creature .frameHp {
+  width: 70px;
+  height: 34px;
+}
+
+.creature .frameHp span {
+  font-size: 0.82rem;
+}
+
+.creature.active {
+  border-color: rgba(255, 209, 102, 0.96);
+  box-shadow:
+    0 0 0 3px rgba(255, 209, 102, 0.18),
+    0 20px 48px rgba(0, 0, 0, 0.44);
+}
+
+.creature.target {
+  outline: 0;
+  border-color: rgba(244, 247, 251, 0.88);
+}
+
+.attached {
+  border-radius: 8px;
+}
+
+.cardAbilities {
+  border-radius: 10px;
+  background: rgba(4, 8, 14, 0.76);
+}
+
+.abilityChip {
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.abilityChip.ready {
+  border-color: rgba(255, 209, 102, 0.72);
+  background:
+    linear-gradient(135deg, rgba(255, 209, 102, 0.18), rgba(76, 201, 240, 0.12)),
+    rgba(4, 8, 14, 0.78);
+  cursor: grab;
+}
+
+.handsOverview {
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.handRow {
+  background: rgba(8, 13, 21, 0.66);
+}
+
+.miniHandCards {
+  min-height: 166px;
+}
+
+.miniHandCard {
+  width: 140px;
+  min-width: 140px;
+  min-height: 160px;
+}
+
+.notes {
+  position: sticky;
+  top: 12px;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  padding: 12px;
+}
+
+.notes details {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.cardModal {
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(15, 24, 37, 0.98), rgba(5, 8, 14, 0.98)),
+    #070a10;
+}
+
+.modalClose {
+  border-radius: 10px;
+}
+
+@media (max-width: 1180px) {
+  .hero,
+  .battleShell .hero,
+  .battleGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .notes {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .shell,
+  .battleShell {
+    padding: 8px;
+  }
+
+  .hero,
+  .panel {
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .hero h1,
+  .battleShell .hero h1 {
+    font-size: 2.35rem;
+  }
+
+  .heroMetrics,
+  .scoreBar,
+  .handsOverview,
+  .poolGroups,
+  .abilityActions {
+    grid-template-columns: 1fr;
+  }
+
+  .seedBox div {
+    grid-template-columns: 1fr;
+  }
+
+  .phaseHead {
+    align-items: stretch;
+  }
+
+  .phaseHead h2 {
+    font-size: 1.45rem;
+  }
+
+  .deploymentMeta {
+    grid-template-columns: 1fr;
+  }
+
+  .deploymentMeta span,
+  .deploymentMeta span:last-child,
+  .deploymentMeta strong {
+    text-align: left;
+  }
+
+  .deploymentPanel .cardGrid,
+  .cardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .card,
+  .card.compact {
+    min-height: 480px;
+  }
+
+  .frameHero,
+  .cardFrame.compact .frameHero {
+    min-height: 268px;
+  }
+
+  .initiativeLine {
+    grid-auto-columns: minmax(224px, 84vw);
+  }
+
+  .initiativeColumn {
+    grid-template-rows: minmax(320px, auto) 36px minmax(320px, auto);
+  }
+
+  .battleShell .battleGrid {
+    zoom: 1;
+  }
+}

@@ -1656,10 +1656,10 @@ function CardInspectModal({
 function RulesGuide() {
   return (
     <section className="rulesGuide" aria-label="Правила и описание игры">
-      <details open>
+      <details>
         <summary>
           <span>
-            <b>Правила / как играть</b>
+            <b>Быстрые правила</b>
             <small>Космическая версия боевого теста</small>
           </span>
         </summary>
@@ -1920,12 +1920,26 @@ export function SpaceCombatGame() {
           <p className="eyebrow">
             Space Combat Draft · v0.1 · 10 карт в колоде · {rulesMode === "light" ? "Light" : "Full"}
           </p>
-          <h1>Космическая боевая система</h1>
+          <h1>Space Combat Draft</h1>
           <p>
             Альтернативный тест для космической 4X: у каждого игрока симметричная колода из 10 карт,
             перед боем случайно берутся 6 в руку. Игрок сам выбирает 3 корабля на старт, затем
             ещё 2 раунда подкреплений по 1 кораблю, а кубы идут в общий пул своего игрока.
           </p>
+          <div className="heroMetrics" aria-label="Параметры партии">
+            <span>
+              <strong>6</strong>
+              карт в руке
+            </span>
+            <span>
+              <strong>3+2</strong>
+              выхода кораблей
+            </span>
+            <span>
+              <strong>2</strong>
+              личных пула кубов
+            </span>
+          </div>
         </div>
         <div className="seedBox">
           <label htmlFor="seed">Seed партии</label>
