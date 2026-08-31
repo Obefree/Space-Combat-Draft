@@ -1649,12 +1649,12 @@ function HandCardButton({
   const flavor = dominantDie(card);
   return (
     <button
-      className={`card compact handChoiceCard ${flavor} ${selected ? "selected" : ""}`}
+      className={`card handChoiceCard ${flavor} ${selected ? "selected" : ""}`}
       disabled={disabled && !selected}
       onClick={onClick}
       type="button"
     >
-      <CardFrame card={card} compact hpText={`${card.health}`} owner={owner} onArtClick={onInspect}>
+      <CardFrame card={card} hpText={`${card.health}`} owner={owner} onArtClick={onInspect}>
         {card.abilities.map((ability) => (
           <p key={ability.id}>
             <span className="abilityLineHead">

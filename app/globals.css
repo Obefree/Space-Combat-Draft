@@ -455,11 +455,7 @@ button:disabled {
 }
 
 .handChoiceCard {
-  min-height: 300px;
-}
-
-.handChoiceCard .cardFrame.compact .frameHero {
-  min-height: 230px;
+  min-height: 500px;
 }
 
 .cardArt {
@@ -2554,7 +2550,7 @@ input:focus-visible,
 }
 
 .deploymentPanel .cardGrid {
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   align-items: start;
 }
 
