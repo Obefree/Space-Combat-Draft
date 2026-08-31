@@ -55,6 +55,10 @@ type Die = {
   value: number;
 };
 
+type DieLocation =
+  | { kind: "pool"; die: Die; playerId: PlayerId }
+  | { kind: "creature"; die: Die; creatureId: string; owner: PlayerId };
+
 type Creature = {
   id: string;
   owner: PlayerId;
@@ -139,14 +143,14 @@ const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme> = {
     abilities: {
       tuning: {
         name_ru: "Разгон контура",
-        text_ru: "✦3: добавь ✦2 в свой пул.",
-        cost: { threshold: 3, requirements: { magic: 1 } },
+        text_ru: "✦2: добавь ✦2 на заряд этого корабля.",
+        cost: { threshold: 2, requirements: { magic: 1 } },
         effects: [{ type: "gain_die", die_type: "magic", amount: 2 }],
       },
       catalyst: {
         name_ru: "Переплавка заряда",
-        text_ru: "✦+🛡5: измени свой худший куб на +1, максимум до 3.",
-        cost: { threshold: 5, requirements: { magic: 1, defense: 1 } },
+        text_ru: "✦+🛡4: измени свой худший заряд на +1, максимум до 3.",
+        cost: { threshold: 4, requirements: { magic: 1, defense: 1 } },
         effects: [{ type: "increase_target_ally_die", amount: 1, max: 3 }],
       },
     },
@@ -160,14 +164,14 @@ const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme> = {
     abilities: {
       fortify: {
         name_ru: "Зарядить батареи",
-        text_ru: "🛡3: добавь 🛡2 в свой пул.",
-        cost: { threshold: 3, requirements: { defense: 1 } },
+        text_ru: "🛡2: добавь 🛡2 на заряд этого корабля.",
+        cost: { threshold: 2, requirements: { defense: 1 } },
         effects: [{ type: "gain_die", die_type: "defense", amount: 2 }],
       },
       shelter: {
         name_ru: "Грави-щит эскадры",
-        text_ru: "🛡+✦7: два союзных корабля восстанавливают по 2 HP.",
-        cost: { threshold: 7, requirements: { defense: 1, magic: 1 } },
+        text_ru: "🛡+✦5: два союзных корабля восстанавливают по 2 HP.",
+        cost: { threshold: 5, requirements: { defense: 1, magic: 1 } },
         effects: [{ type: "heal_two_allies", amount: 2 }],
       },
     },
@@ -181,8 +185,8 @@ const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme> = {
     abilities: {
       cover: {
         name_ru: "Закрыть сектор",
-        text_ru: "🛡3: союзник лечит 2 HP, Эскорт получает 1 самоурон.",
-        cost: { threshold: 3, requirements: { defense: 1 } },
+        text_ru: "🛡2: союзник лечит 2 HP, Эскорт получает 1 самоурон.",
+        cost: { threshold: 2, requirements: { defense: 1 } },
         effects: [
           { type: "heal", amount: 2, target: "ally_other" },
           { type: "self_damage", amount: 1 },
@@ -190,8 +194,8 @@ const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme> = {
       },
       counter: {
         name_ru: "Перехват ракеты",
-        text_ru: "🛡+⚔5: нанеси 1 урон и укради у врага куб значения 2 или ниже.",
-        cost: { threshold: 5, requirements: { defense: 1, attack: 1 } },
+        text_ru: "🛡+⚔4: нанеси 1 урон и укради у врага куб значения 2 или ниже.",
+        cost: { threshold: 4, requirements: { defense: 1, attack: 1 } },
         effects: [
           { type: "damage", amount: 1, target: "enemy" },
           { type: "steal_enemy_die", value_max: 2, count: 1 },
@@ -208,14 +212,14 @@ const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme> = {
     abilities: {
       finish: {
         name_ru: "Маркер уязвимости",
-        text_ru: "⚔4: нанеси 1 урон, либо 3 уже повреждённой цели.",
-        cost: { threshold: 4, requirements: { attack: 1 } },
+        text_ru: "⚔2: нанеси 1 урон, либо 3 уже повреждённой цели.",
+        cost: { threshold: 2, requirements: { attack: 1 } },
         effects: [{ type: "damage", amount: 1, target: "enemy", bonus_amount: 2, condition: "target_damaged" }],
       },
       precise_shot: {
         name_ru: "Игла через броню",
-        text_ru: "Сбрось два ⚔ разных значений суммой 5+: нанеси 4 урона повреждённой цели.",
-        cost: { threshold: 5, requirements: { attack: 2 }, exact_dice: 2, different_values: true },
+        text_ru: "Сбрось два ⚔ разных значений суммой 4+: нанеси 4 урона повреждённой цели.",
+        cost: { threshold: 4, requirements: { attack: 2 }, exact_dice: 2, different_values: true },
         effects: [{ type: "damage", amount: 4, target: "enemy", condition: "target_damaged" }],
       },
     },
@@ -229,8 +233,8 @@ const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme> = {
     abilities: {
       attack_order: {
         name_ru: "Скоординированный залп",
-        text_ru: "⚔4: нанеси 1 урон и добавь ⚔1 в свой пул.",
-        cost: { threshold: 4, requirements: { attack: 1 } },
+        text_ru: "⚔2: нанеси 1 урон и добавь ⚔1 на заряд этого корабля.",
+        cost: { threshold: 2, requirements: { attack: 1 } },
         effects: [
           { type: "damage", amount: 1, target: "enemy" },
           { type: "gain_die", die_type: "attack", amount: 1 },
@@ -238,8 +242,8 @@ const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme> = {
       },
       coordination: {
         name_ru: "Приказ на прорыв",
-        text_ru: "⚔+✦6: нанеси 2 урона и увеличь свой самый слабый куб на 1.",
-        cost: { threshold: 6, requirements: { attack: 1, magic: 1 } },
+        text_ru: "⚔+✦4: нанеси 2 урона и увеличь свой самый слабый заряд на 1.",
+        cost: { threshold: 4, requirements: { attack: 1, magic: 1 } },
         effects: [
           { type: "damage", amount: 2, target: "enemy" },
           { type: "increase_target_ally_die", amount: 1, max: 3 },
@@ -256,14 +260,14 @@ const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme> = {
     abilities: {
       measured_strike: {
         name_ru: "Тяжёлый борт",
-        text_ru: "⚔5: нанеси 2 урона.",
-        cost: { threshold: 5, requirements: { attack: 1 } },
+        text_ru: "⚔3: нанеси 2 урона.",
+        cost: { threshold: 3, requirements: { attack: 1 } },
         effects: [{ type: "damage", amount: 2, target: "enemy" }],
       },
       last_stand: {
         name_ru: "Осадный протокол",
-        text_ru: "⚔+🛡+✦9: нанеси 6 урона врагу. Нужно копить пул.",
-        cost: { threshold: 9, requirements: { attack: 1, defense: 1, magic: 1 } },
+        text_ru: "⚔+🛡+✦6: нанеси 6 урона врагу. Нужно копить заряд.",
+        cost: { threshold: 6, requirements: { attack: 1, defense: 1, magic: 1 } },
         effects: [{ type: "damage", amount: 6, target: "enemy" }],
       },
     },
@@ -277,14 +281,14 @@ const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme> = {
     abilities: {
       healing: {
         name_ru: "Ремонтные дроны",
-        text_ru: "🛡4: восстанови 3 HP кораблю.",
-        cost: { threshold: 4, requirements: { defense: 1 } },
+        text_ru: "🛡2: восстанови 3 HP кораблю.",
+        cost: { threshold: 2, requirements: { defense: 1 } },
         effects: [{ type: "heal", amount: 3, target: "ally" }],
       },
       smite: {
         name_ru: "Боевой ремонт",
-        text_ru: "🛡+⚔6: нанеси 2 урона врагу и вылечи союзника на 2 HP.",
-        cost: { threshold: 6, requirements: { defense: 1, attack: 1 } },
+        text_ru: "🛡+⚔4: нанеси 2 урона врагу и вылечи союзника на 2 HP.",
+        cost: { threshold: 4, requirements: { defense: 1, attack: 1 } },
         effects: [
           { type: "damage", amount: 2, target: "enemy" },
           { type: "heal", amount: 2, target: "ally" },
@@ -301,17 +305,17 @@ const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme> = {
     abilities: {
       strike: {
         name_ru: "Абордажный крюк",
-        text_ru: "⚔3: укради у врага куб значения 1 или ниже.",
-        cost: { threshold: 3, requirements: { attack: 1 } },
-        effects: [{ type: "steal_enemy_die", value_max: 1, count: 1 }],
+        text_ru: "⚔2: укради у врага куб значения 2 или ниже.",
+        cost: { threshold: 2, requirements: { attack: 1 } },
+        effects: [{ type: "steal_enemy_die", value_max: 2, count: 1 }],
       },
       plunder: {
         name_ru: "Грабёж конвоя",
-        text_ru: "⚔+🛡5: нанеси 2 урона и укради у врага куб значения 2 или ниже.",
-        cost: { threshold: 5, requirements: { attack: 1, defense: 1 } },
+        text_ru: "⚔+🛡4: нанеси 2 урона и укради у врага до 2 кубов значения 2 или ниже.",
+        cost: { threshold: 4, requirements: { attack: 1, defense: 1 } },
         effects: [
           { type: "damage", amount: 2, target: "enemy" },
-          { type: "steal_enemy_die", value_max: 2, count: 1 },
+          { type: "steal_enemy_die", value_max: 2, count: 2 },
         ],
       },
     },
@@ -325,8 +329,8 @@ const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme> = {
     abilities: {
       cut: {
         name_ru: "Первый контакт",
-        text_ru: "⚔3: нанеси 1 урон и уменьши сильный куб врага на 1.",
-        cost: { threshold: 3, requirements: { attack: 1 } },
+        text_ru: "⚔2: нанеси 1 урон и уменьши сильный куб врага на 1.",
+        cost: { threshold: 2, requirements: { attack: 1 } },
         effects: [
           { type: "damage", amount: 1, target: "enemy" },
           { type: "decrease_target_die", amount: 1, min: 1 },
@@ -334,8 +338,8 @@ const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme> = {
       },
       first_strike: {
         name_ru: "Пробой щита",
-        text_ru: "⚔+✦5: нанеси 3 урона цели, если в пуле врага нет кубов.",
-        cost: { threshold: 5, requirements: { attack: 1, magic: 1 } },
+        text_ru: "⚔+✦4: нанеси 3 урона цели, если на ней нет заряда.",
+        cost: { threshold: 4, requirements: { attack: 1, magic: 1 } },
         effects: [{ type: "damage", amount: 3, target: "enemy", condition: "target_has_no_dice" }],
       },
     },
@@ -349,14 +353,14 @@ const SPACE_CARD_THEME_BY_ID: Record<string, SpaceCardTheme> = {
     abilities: {
       transmutation: {
         name_ru: "Глушение частоты",
-        text_ru: "✦3: уменьши сильный куб врага на 1.",
-        cost: { threshold: 3, requirements: { magic: 1 } },
+        text_ru: "✦2: уменьши сильный куб врага на 1.",
+        cost: { threshold: 2, requirements: { magic: 1 } },
         effects: [{ type: "decrease_target_die", amount: 1, min: 1 }],
       },
       mass_transmutation: {
         name_ru: "Разрыв построения",
-        text_ru: "✦+🛡7: нанеси 1 урон всем вражеским кораблям и сбрось один вражеский куб 2 или ниже.",
-        cost: { threshold: 7, requirements: { magic: 1, defense: 1 } },
+        text_ru: "✦+🛡5: нанеси 1 урон всем вражеским кораблям и сбрось один вражеский куб 2 или ниже.",
+        cost: { threshold: 5, requirements: { magic: 1, defense: 1 } },
         effects: [
           { type: "damage_all_enemies", amount: 1 },
           { type: "return_target_die_to_pool", value_max: 2 },
@@ -603,6 +607,56 @@ function clonePlayers(players: Record<PlayerId, Player>): Record<PlayerId, Playe
   };
 }
 
+function cardDieTypeCounts(card: CardData) {
+  return card.dice.reduce(
+    (acc, dieType) => ({ ...acc, [dieType]: acc[dieType] + 1 }),
+    { attack: 0, defense: 0, magic: 0 } as Record<DieType, number>,
+  );
+}
+
+function dieTypeCounts(dice: Die[]) {
+  return dice.reduce(
+    (acc, die) => ({ ...acc, [die.type]: acc[die.type] + 1 }),
+    { attack: 0, defense: 0, magic: 0 } as Record<DieType, number>,
+  );
+}
+
+function chooseChargeDice(pool: Die[], creature: Creature) {
+  const printed = cardDieTypeCounts(creature.card);
+  const stored = dieTypeCounts(creature.attached);
+  const selected: Die[] = [];
+  const selectedIds = new Set<string>();
+
+  for (const type of ["attack", "defense", "magic"] as DieType[]) {
+    const need = Math.max(0, printed[type] - stored[type]);
+    const candidates = pool
+      .filter((die) => die.type === type && !selectedIds.has(die.id))
+      .sort((left, right) => {
+        if (right.value !== left.value) return right.value - left.value;
+        return left.id.localeCompare(right.id);
+      })
+      .slice(0, need);
+    for (const die of candidates) {
+      selected.push(die);
+      selectedIds.add(die.id);
+    }
+  }
+
+  return selected;
+}
+
+function addDiceToCreature(
+  players: Record<PlayerId, Player>,
+  creatureId: string,
+  dice: Die[],
+) {
+  if (!dice.length) return players;
+  return updateCreature(players, creatureId, (creature) => ({
+    ...creature,
+    attached: [...creature.attached, ...dice],
+  }));
+}
+
 function deployOneCreature(
   state: GameState,
   playerId: PlayerId,
@@ -629,6 +683,33 @@ function deployOneCreature(
   }
 
   return [creature, nextState];
+}
+
+function chargeActiveCreature(state: GameState): GameState {
+  if (!state.battle?.activeCreatureId) return state;
+  const actor = getCreature(state.players, state.battle.activeCreatureId);
+  if (!actor || !actor.alive) return state;
+
+  const pools = clonePools(state.battle.pools);
+  const charge = chooseChargeDice(pools[actor.owner], actor);
+  if (!charge.length) return state;
+
+  const chargeIds = new Set(charge.map((die) => die.id));
+  removePoolDice(pools, actor.owner, chargeIds);
+  const players = addDiceToCreature(state.players, actor.id, charge);
+
+  return {
+    ...state,
+    players,
+    battle: {
+      ...state.battle,
+      pools,
+      log: [
+        `${actor.card.name_ru} заряжается ${formatDiceList(charge)} из резерва ${PLAYERS[actor.owner].short}.`,
+        ...state.battle.log,
+      ].slice(0, 24),
+    },
+  };
 }
 
 function confirmDeploymentSelection(state: GameState): GameState {
@@ -708,13 +789,13 @@ function confirmDeploymentSelection(state: GameState): GameState {
     });
   }
 
-  return {
+  return chargeActiveCreature({
     ...nextState,
     phase: "battle",
     players,
     deployment: null,
     battle: battleState,
-  };
+  });
 }
 
 function getCreature(players: Record<PlayerId, Player>, creatureId: string | null) {
@@ -797,10 +878,7 @@ function canTarget(
   if (effect.target?.startsWith("ally") && target.owner !== actor.owner) return false;
   if (effect.target === "ally_other" && target.id === actor.id) return false;
   if (effect.target === "self" && target.id !== actor.id) return false;
-  if (
-    effect.condition === "target_has_no_dice" &&
-    (pools?.[target.owner].length ?? target.attached.length) > 0
-  ) {
+  if (effect.condition === "target_has_no_dice" && target.attached.length > 0) {
     return false;
   }
   if (effect.condition === "target_damaged" && target.hp >= target.card.health) {
@@ -829,7 +907,7 @@ function damageAmount(
   }
   if (
     effect.condition === "target_has_die_value_1" &&
-    (pools?.[target.owner] ?? target.attached).some((die) => die.value === 1)
+    target.attached.some((die) => die.value === 1)
   ) {
     amount += effect.bonus_amount ?? 0;
   }
@@ -874,7 +952,7 @@ function abilityPrimaryObject(ability: Ability) {
       ].includes(effect.type),
     )
   ) {
-    return "куб или карта";
+    return "заряд или карта";
   }
   if (ability.effects.some((effect) => effect.target === "enemy")) {
     return "карта врага";
@@ -937,35 +1015,102 @@ function cleanupDeaths(players: Record<PlayerId, Player>, log: string[]) {
   return nextPlayers;
 }
 
-function bestDieForValueDecrease(dice: Die[], minValue: number) {
-  return [...dice]
-    .filter((die) => die.value > minValue)
+function creatureDieLocations(players: Record<PlayerId, Player>, creatureId: string) {
+  const creature = getCreature(players, creatureId);
+  if (!creature) return [];
+  return creature.attached.map(
+    (die): DieLocation => ({
+      kind: "creature",
+      die,
+      creatureId: creature.id,
+      owner: creature.owner,
+    }),
+  );
+}
+
+function playerDieLocations(
+  players: Record<PlayerId, Player>,
+  pools: Record<PlayerId, Die[]>,
+  playerId: PlayerId,
+) {
+  const poolLocations = pools[playerId].map(
+    (die): DieLocation => ({ kind: "pool", die, playerId }),
+  );
+  const storedLocations = players[playerId].creatures
+    .filter((creature) => creature.alive)
+    .flatMap((creature) =>
+      creature.attached.map(
+        (die): DieLocation => ({
+          kind: "creature",
+          die,
+          creatureId: creature.id,
+          owner: creature.owner,
+        }),
+      ),
+    );
+  return [...poolLocations, ...storedLocations];
+}
+
+function bestLocationForValueDecrease(locations: DieLocation[], minValue: number) {
+  return [...locations]
+    .filter((location) => location.die.value > minValue)
     .sort((left, right) => {
-      if (right.value !== left.value) return right.value - left.value;
-      return left.id.localeCompare(right.id);
+      if (right.die.value !== left.die.value) return right.die.value - left.die.value;
+      return left.die.id.localeCompare(right.die.id);
     })[0];
 }
 
-function bestDieForValueIncrease(dice: Die[], maxValue: number) {
-  return [...dice]
-    .filter((die) => die.value < maxValue)
+function bestLocationForValueIncrease(locations: DieLocation[], maxValue: number) {
+  return [...locations]
+    .filter((location) => location.die.value < maxValue)
     .sort((left, right) => {
-      if (left.value !== right.value) return left.value - right.value;
-      return left.id.localeCompare(right.id);
+      if (left.die.value !== right.die.value) return left.die.value - right.die.value;
+      return left.die.id.localeCompare(right.die.id);
     })[0];
 }
 
-function bestDieForReturn(dice: Die[], valueMax: number) {
-  return [...dice]
-    .filter((die) => die.value <= valueMax)
+function bestLocationForReturn(locations: DieLocation[], valueMax: number) {
+  return [...locations]
+    .filter((location) => location.die.value <= valueMax)
     .sort((left, right) => {
-      if (right.value !== left.value) return right.value - left.value;
-      return left.id.localeCompare(right.id);
+      if (right.die.value !== left.die.value) return right.die.value - left.die.value;
+      return left.die.id.localeCompare(right.die.id);
     })[0];
 }
 
-function bestDieForSteal(dice: Die[], valueMax: number) {
-  return bestDieForReturn(dice, valueMax);
+function removeDieLocation(
+  players: Record<PlayerId, Player>,
+  pools: Record<PlayerId, Die[]>,
+  location: DieLocation,
+) {
+  if (location.kind === "pool") {
+    removePoolDice(pools, location.playerId, new Set([location.die.id]));
+    return players;
+  }
+
+  return updateCreature(players, location.creatureId, (creature) => ({
+    ...creature,
+    attached: creature.attached.filter((die) => die.id !== location.die.id),
+  }));
+}
+
+function updateDieLocation(
+  players: Record<PlayerId, Player>,
+  pools: Record<PlayerId, Die[]>,
+  location: DieLocation,
+  updater: (die: Die) => Die,
+) {
+  if (location.kind === "pool") {
+    updatePoolDie(pools, location.playerId, location.die.id, updater);
+    return players;
+  }
+
+  return updateCreature(players, location.creatureId, (creature) => ({
+    ...creature,
+    attached: creature.attached.map((die) =>
+      die.id === location.die.id ? updater(die) : die,
+    ),
+  }));
 }
 
 function updatePoolDie(
@@ -993,21 +1138,23 @@ function resolveAbility(
   explicitTargetId?: string | null,
 ): GameState {
   if (!state.battle?.activeCreatureId) return state;
-  const actor = getCreature(state.players, state.battle.activeCreatureId);
+  const pools = clonePools(state.battle.pools);
+  let players = clonePlayers(state.players);
+  const actor = getCreature(players, state.battle.activeCreatureId);
   if (!actor || !actor.alive) return state;
 
-  const pools = clonePools(state.battle.pools);
-  const actorPool = pools[actor.owner];
-  const payment = findPayment(actorPool, ability.cost);
+  const payment = findPayment(actor.attached, ability.cost);
   if (!payment) return state;
 
   const spentIds = new Set(payment.map((die) => die.id));
-  removePoolDice(pools, actor.owner, spentIds);
-  let players = state.players;
+  players = updateCreature(players, actor.id, (creature) => ({
+    ...creature,
+    attached: creature.attached.filter((die) => !spentIds.has(die.id)),
+  }));
   let nextDieNumber = state.nextDieNumber;
   const actorAfterPayment = getCreature(players, actor.id) ?? actor;
   const log = [
-    `${actor.card.name_ru} платит ${formatDiceList(payment)} за «${ability.name_ru}».`,
+    `${actor.card.name_ru} тратит заряд ${formatDiceList(payment)} за «${ability.name_ru}».`,
     ...state.battle.log,
   ];
   const preferredTargetId = explicitTargetId ?? state.battle.selectedTargetId;
@@ -1017,23 +1164,24 @@ function resolveAbility(
       const min = effect.min ?? 1;
       const max = effect.max ?? 3;
       const amount = effect.amount ?? 1;
+      const ownCharge = creatureDieLocations(players, actor.id);
       const dieToAdjust =
-        bestDieForValueIncrease(pools[actor.owner], max) ??
-        bestDieForValueDecrease(pools[actor.owner], min);
+        bestLocationForValueIncrease(ownCharge, max) ??
+        bestLocationForValueDecrease(ownCharge, min);
       if (!dieToAdjust) {
-        log.unshift("В пуле игрока нет куба, который можно изменить.");
+        log.unshift("На заряде корабля нет куба, который можно изменить.");
         continue;
       }
       const nextValue =
-        dieToAdjust.value < max
-          ? Math.min(max, dieToAdjust.value + amount)
-          : Math.max(min, dieToAdjust.value - amount);
-      updatePoolDie(pools, actor.owner, dieToAdjust.id, (die) => ({
+        dieToAdjust.die.value < max
+          ? Math.min(max, dieToAdjust.die.value + amount)
+          : Math.max(min, dieToAdjust.die.value - amount);
+      players = updateDieLocation(players, pools, dieToAdjust, (die) => ({
         ...die,
         value: nextValue,
       }));
       log.unshift(
-        `${PLAYERS[actor.owner].name}: ${DIE_META[dieToAdjust.type].icon}${dieToAdjust.value} → ${DIE_META[dieToAdjust.type].icon}${nextValue}.`,
+        `${actor.card.name_ru}: ${DIE_META[dieToAdjust.die.type].icon}${dieToAdjust.die.value} → ${DIE_META[dieToAdjust.die.type].icon}${nextValue}.`,
       );
       continue;
     }
@@ -1042,23 +1190,24 @@ function resolveAbility(
       const min = effect.min ?? 1;
       const max = effect.max ?? 3;
       const amount = effect.amount ?? 1;
+      const ownDice = playerDieLocations(players, pools, actor.owner);
       const dieToAdjust =
-        bestDieForValueIncrease(pools[actor.owner], max) ??
-        bestDieForValueDecrease(pools[actor.owner], min);
+        bestLocationForValueIncrease(ownDice, max) ??
+        bestLocationForValueDecrease(ownDice, min);
       if (!dieToAdjust) {
-        log.unshift("В пуле игрока нет куба, который можно изменить.");
+        log.unshift("У игрока нет куба, который можно изменить.");
         continue;
       }
       const nextValue =
-        dieToAdjust.value < max
-          ? Math.min(max, dieToAdjust.value + amount)
-          : Math.max(min, dieToAdjust.value - amount);
-      updatePoolDie(pools, actor.owner, dieToAdjust.id, (die) => ({
+        dieToAdjust.die.value < max
+          ? Math.min(max, dieToAdjust.die.value + amount)
+          : Math.max(min, dieToAdjust.die.value - amount);
+      players = updateDieLocation(players, pools, dieToAdjust, (die) => ({
         ...die,
         value: nextValue,
       }));
       log.unshift(
-        `${PLAYERS[actor.owner].name}: ${DIE_META[dieToAdjust.type].icon}${dieToAdjust.value} → ${DIE_META[dieToAdjust.type].icon}${nextValue}.`,
+        `${PLAYERS[actor.owner].name}: ${DIE_META[dieToAdjust.die.type].icon}${dieToAdjust.die.value} → ${DIE_META[dieToAdjust.die.type].icon}${nextValue}.`,
       );
       continue;
     }
@@ -1067,18 +1216,23 @@ function resolveAbility(
       const min = effect.min ?? 1;
       const amount = effect.amount ?? 1;
       const enemyId: PlayerId = actor.owner === "A" ? "B" : "A";
-      const dieToDecrease = bestDieForValueDecrease(pools[enemyId], min);
+      const preferredTarget = getCreature(players, preferredTargetId ?? null);
+      const preferredDice =
+        preferredTarget?.owner === enemyId ? creatureDieLocations(players, preferredTarget.id) : [];
+      const dieToDecrease =
+        bestLocationForValueDecrease(preferredDice, min) ??
+        bestLocationForValueDecrease(playerDieLocations(players, pools, enemyId), min);
       if (!dieToDecrease) {
-        log.unshift("В пуле врага нет куба, который можно уменьшить.");
+        log.unshift("У врага нет куба, который можно уменьшить.");
         continue;
       }
-      const nextValue = Math.max(min, dieToDecrease.value - amount);
-      updatePoolDie(pools, enemyId, dieToDecrease.id, (die) => ({
+      const nextValue = Math.max(min, dieToDecrease.die.value - amount);
+      players = updateDieLocation(players, pools, dieToDecrease, (die) => ({
         ...die,
         value: nextValue,
       }));
       log.unshift(
-        `${PLAYERS[enemyId].name}: ${DIE_META[dieToDecrease.type].icon}${dieToDecrease.value} → ${DIE_META[dieToDecrease.type].icon}${nextValue}.`,
+        `${PLAYERS[enemyId].name}: ${DIE_META[dieToDecrease.die.type].icon}${dieToDecrease.die.value} → ${DIE_META[dieToDecrease.die.type].icon}${nextValue}.`,
       );
       continue;
     }
@@ -1086,18 +1240,21 @@ function resolveAbility(
     if (effect.type === "increase_target_ally_die") {
       const max = effect.max ?? 3;
       const amount = effect.amount ?? 1;
-      const dieToIncrease = bestDieForValueIncrease(pools[actor.owner], max);
+      const ownCharge = creatureDieLocations(players, actor.id);
+      const dieToIncrease =
+        bestLocationForValueIncrease(ownCharge, max) ??
+        bestLocationForValueIncrease(playerDieLocations(players, pools, actor.owner), max);
       if (!dieToIncrease) {
-        log.unshift("В пуле игрока нет куба, который можно увеличить.");
+        log.unshift("У игрока нет куба, который можно увеличить.");
         continue;
       }
-      const nextValue = Math.min(max, dieToIncrease.value + amount);
-      updatePoolDie(pools, actor.owner, dieToIncrease.id, (die) => ({
+      const nextValue = Math.min(max, dieToIncrease.die.value + amount);
+      players = updateDieLocation(players, pools, dieToIncrease, (die) => ({
         ...die,
         value: nextValue,
       }));
       log.unshift(
-        `${PLAYERS[actor.owner].name}: ${DIE_META[dieToIncrease.type].icon}${dieToIncrease.value} → ${DIE_META[dieToIncrease.type].icon}${nextValue}.`,
+        `${PLAYERS[actor.owner].name}: ${DIE_META[dieToIncrease.die.type].icon}${dieToIncrease.die.value} → ${DIE_META[dieToIncrease.die.type].icon}${nextValue}.`,
       );
       continue;
     }
@@ -1105,14 +1262,19 @@ function resolveAbility(
     if (effect.type === "return_target_die_to_pool") {
       const valueMax = effect.value_max ?? 3;
       const enemyId: PlayerId = actor.owner === "A" ? "B" : "A";
-      const dieToReturn = bestDieForReturn(pools[enemyId], valueMax);
+      const preferredTarget = getCreature(players, preferredTargetId ?? null);
+      const preferredDice =
+        preferredTarget?.owner === enemyId ? creatureDieLocations(players, preferredTarget.id) : [];
+      const dieToReturn =
+        bestLocationForReturn(preferredDice, valueMax) ??
+        bestLocationForReturn(playerDieLocations(players, pools, enemyId), valueMax);
       if (!dieToReturn) {
-        log.unshift(`В пуле врага нет куба значения ${valueMax} или ниже для сброса.`);
+        log.unshift(`У врага нет куба значения ${valueMax} или ниже для сброса.`);
         continue;
       }
-      removePoolDice(pools, enemyId, new Set([dieToReturn.id]));
+      players = removeDieLocation(players, pools, dieToReturn);
       log.unshift(
-        `${PLAYERS[enemyId].name} сбрасывает ${DIE_META[dieToReturn.type].icon}${dieToReturn.value} из своего пула.`,
+        `${PLAYERS[enemyId].name} сбрасывает ${DIE_META[dieToReturn.die.type].icon}${dieToReturn.die.value}.`,
       );
       continue;
     }
@@ -1126,8 +1288,8 @@ function resolveAbility(
         value,
       };
       nextDieNumber += 1;
-      pools[actor.owner].push(die);
-      log.unshift(`${PLAYERS[actor.owner].name} получает заряд ${DIE_META[dieType].icon}${value} в пул.`);
+      players = addDiceToCreature(players, actor.id, [die]);
+      log.unshift(`${actor.card.name_ru} получает дополнительный заряд ${DIE_META[dieType].icon}${value}.`);
       continue;
     }
 
@@ -1136,15 +1298,20 @@ function resolveAbility(
       const count = effect.count ?? 1;
       const enemyId: PlayerId = actor.owner === "A" ? "B" : "A";
       for (let index = 0; index < count; index += 1) {
-        const dieToSteal = bestDieForSteal(pools[enemyId], valueMax);
+        const preferredTarget = getCreature(players, preferredTargetId ?? null);
+        const preferredDice =
+          preferredTarget?.owner === enemyId ? creatureDieLocations(players, preferredTarget.id) : [];
+        const dieToSteal =
+          bestLocationForReturn(preferredDice, valueMax) ??
+          bestLocationForReturn(playerDieLocations(players, pools, enemyId), valueMax);
         if (!dieToSteal) {
-          log.unshift(`В пуле врага нет куба значения ${valueMax} или ниже для кражи.`);
+          log.unshift(`У врага нет куба значения ${valueMax} или ниже для кражи.`);
           break;
         }
-        removePoolDice(pools, enemyId, new Set([dieToSteal.id]));
-        pools[actor.owner].push(dieToSteal);
+        players = removeDieLocation(players, pools, dieToSteal);
+        players = addDiceToCreature(players, actor.id, [dieToSteal.die]);
         log.unshift(
-          `${actor.card.name_ru} крадёт ${DIE_META[dieToSteal.type].icon}${dieToSteal.value} из пула ${PLAYERS[enemyId].short}.`,
+          `${actor.card.name_ru} крадёт ${DIE_META[dieToSteal.die.type].icon}${dieToSteal.die.value} у ${PLAYERS[enemyId].short} на свой заряд.`,
         );
       }
       continue;
@@ -1310,7 +1477,7 @@ function startNextRoundOrDeployment(state: GameState): GameState {
     return finishGame(state);
   }
 
-  return {
+  return chargeActiveCreature({
     ...state,
     battle: {
       ...state.battle,
@@ -1321,7 +1488,7 @@ function startNextRoundOrDeployment(state: GameState): GameState {
       selectedTargetId: null,
       log: [`Раунд ${state.battle.round + 1}: очередь инициативы обновлена.`, ...state.battle.log].slice(0, 24),
     },
-  };
+  });
 }
 
 function bothSidesCanContinue(players: Record<PlayerId, Player>) {
@@ -1360,7 +1527,7 @@ function advanceActivation(state: GameState): GameState {
 
   if (queue.length === 0) return startNextRoundOrDeployment({ ...state, battle: { ...state.battle, queue } });
 
-  return {
+  return chargeActiveCreature({
     ...state,
     battle: {
       ...state.battle,
@@ -1370,7 +1537,7 @@ function advanceActivation(state: GameState): GameState {
       selectedTargetId: null,
       log: [`Ход переходит к ${getCreature(state.players, queue[0])?.card.name_ru}.`, ...state.battle.log].slice(0, 24),
     },
-  };
+  });
 }
 
 function formatDiceList(dice: Die[]) {
@@ -1660,13 +1827,29 @@ function HandCardButton({
   );
 }
 
+function ChargeRack({ dice }: { dice: Die[] }) {
+  return (
+    <div className="attached chargeRack" aria-label="Заряд корабля">
+      <strong>Заряд</strong>
+      <span>
+        {dice.length
+          ? dice.map((die) => (
+              <i className={`die ${die.type}`} key={die.id}>
+                {die.value}
+              </i>
+            ))
+          : "пусто"}
+      </span>
+    </div>
+  );
+}
+
 function CreatureCard({
   creature,
   active,
   target,
   canUseAbilities,
   armed,
-  ownerPool,
   onSelect,
   onAbilityDragStart,
   onAbilityDragEnd,
@@ -1679,7 +1862,6 @@ function CreatureCard({
   target: boolean;
   canUseAbilities: boolean;
   armed: boolean;
-  ownerPool: Die[];
   onSelect: () => void;
   onAbilityDragStart: (ability: Ability) => void;
   onAbilityDragEnd: () => void;
@@ -1713,8 +1895,9 @@ function CreatureCard({
         owner={creature.owner}
         onArtClick={onInspect}
       >
+        <ChargeRack dice={creature.attached} />
         {creature.card.abilities.map((ability) => {
-          const payment = findPayment(ownerPool, ability.cost);
+          const payment = findPayment(creature.attached, ability.cost);
           const ready = canUseAbilities && Boolean(payment);
           return (
             <span
@@ -1906,8 +2089,8 @@ function RulesGuide() {
             <h3>Что это?</h3>
             <p>
               Space Combat Draft — отдельный прототип боя для космической 4X. Он сохраняет
-              идею карт и кубов, но делит экономику на два пула: у каждого игрока свой общий
-              пул кубов.
+              идею карт и кубов, но делит экономику на резерв игрока и заряд конкретного
+              корабля.
             </p>
           </article>
           <article>
@@ -1930,16 +2113,16 @@ function RulesGuide() {
           <article>
             <h3>Бой</h3>
             <p>
-              Корабли ходят по инициативе: чем выше значение, тем раньше ход. В начале боя
-              у каждого игрока на линии 3 корабля.
+              Корабли ходят по инициативе: чем выше значение, тем раньше ход. В начале своей
+              активации корабль забирает подходящие кубы из резерва на свою карту.
             </p>
           </article>
           <article>
             <h3>Кубы и способности</h3>
             <p>
-              При выходе корабль сразу бросает свои напечатанные кубы и добавляет их в общий
-              пул своего игрока. Активный корабль тратит кубы из пула владельца. Если куб
-              больше нужного значения, он всё равно тратится целиком.
+              При выходе корабль сразу бросает свои напечатанные кубы и добавляет их в резерв
+              игрока. Активный корабль хранит кубы на себе и тратит только свой заряд. Если
+              не хватает на способность, заряд можно оставить до следующего раунда.
             </p>
           </article>
           <article>
@@ -1952,7 +2135,7 @@ function RulesGuide() {
         </div>
         <p className="rulesFootnote">
           Подсказка: слева на карте показано, какие кубы корабль добавляет в пул, справа —
-          инициатива и слава, по центру — прочность, снизу — способности и их цена.
+          инициатива и слава, по центру — прочность, снизу — заряд, способности и их цена.
         </p>
       </details>
     </section>
@@ -1963,7 +2146,7 @@ function PlayerPoolPanel({ playerId, dice }: { playerId: PlayerId; dice: Die[] }
   return (
     <div className={`poolGroup playerPool player${playerId}`}>
       <div className="poolGroupHead">
-        <strong>Пул {PLAYERS[playerId].short}</strong>
+        <strong>Резерв {PLAYERS[playerId].short}</strong>
         <span>{dice.length}</span>
       </div>
       <div className="poolGroupDice">
@@ -2117,8 +2300,7 @@ export function SpaceCombatGame() {
 
   function armAbility(ability: Ability) {
     if (!activeCreature || state.battle?.needsDie) return;
-    const ownerPool = state.battle?.pools[activeCreature.owner] ?? [];
-    if (!findPayment(ownerPool, ability.cost)) return;
+    if (!findPayment(activeCreature.attached, ability.cost)) return;
     setArmedAbilityId((current) => (current === ability.id ? null : ability.id));
   }
 
@@ -2171,7 +2353,8 @@ export function SpaceCombatGame() {
           <p>
             Альтернативный тест для космической 4X: у каждого игрока симметричная колода из 10 карт,
             перед боем случайно берутся 6 в руку. Игрок сам выбирает 3 корабля на старт, затем
-            ещё 2 раунда подкреплений по 1 кораблю, а кубы идут в общий пул своего игрока.
+            ещё 2 раунда подкреплений по 1 кораблю, а кубы сначала идут в резерв игрока,
+            затем активный корабль заряжается ими на свою карту.
           </p>
           <div className="heroMetrics" aria-label="Параметры партии">
             <span>
@@ -2339,7 +2522,7 @@ export function SpaceCombatGame() {
             </div>
 
             <div className="pool">
-              <p>Пулы кубов игроков</p>
+              <p>Резерв кубов игроков</p>
               <div className="poolGroups">
                 <PlayerPoolPanel dice={state.battle.pools.A} playerId="A" />
                 <PlayerPoolPanel dice={state.battle.pools.B} playerId="B" />
@@ -2349,7 +2532,8 @@ export function SpaceCombatGame() {
                     <span>{OPENING_CARDS_PER_PLAYER}+{REINFORCEMENT_ROUNDS}×{REINFORCEMENTS_PER_ROUND}</span>
                   </div>
                   <span className="muted">
-                    Корабль при выходе бросает напечатанные кубы в общий пул своего игрока.
+                    Корабль при выходе бросает напечатанные кубы в резерв, а при активации
+                    забирает подходящие кубы на свою карту.
                   </span>
                 </div>
               </div>
@@ -2359,10 +2543,10 @@ export function SpaceCombatGame() {
               <div className="actionBox">
                 <p>
                   {state.battle.needsDie
-                    ? "Кубы уже находятся в пуле владельца активного корабля."
+                    ? "Кубы уже находятся на заряде активного корабля."
                     : activeAbility
                       ? `Выбрана «${activeAbility.name_ru}». Перетащи её на карту или тапни по цели.`
-                      : "Готовые способности видны на активном корабле, если в пуле его игрока хватает кубов. Одна способность завершает активацию корабля до следующего раунда."}
+                      : "Готовые способности видны на активном корабле, если на его заряде хватает кубов. Одна способность завершает активацию корабля до следующего раунда."}
                 </p>
                 <div className="abilityActions">
                   <button type="button" className="secondary" onClick={skipActive}>
@@ -2381,8 +2565,8 @@ export function SpaceCombatGame() {
                   </button>
                 </div>
                 <p className="hint">
-                  Оплата списывает минимальную подходящую сумму кубов. Если точной
-                  суммы нет, целый куб переплачивает остаток.
+                  Оплата списывает минимальную подходящую сумму с заряда этого корабля.
+                  Не потраченные кубы остаются на карте.
                 </p>
               </div>
             ) : null}
@@ -2406,7 +2590,6 @@ export function SpaceCombatGame() {
                               !state.battle.needsDie
                             }
                             creature={creature}
-                            ownerPool={state.battle.pools[creature.owner]}
                             active={creature.id === state.battle?.activeCreatureId}
                             target={creature.id === state.battle?.selectedTargetId}
                             onAbilityDragStart={(ability) => {
@@ -2437,7 +2620,6 @@ export function SpaceCombatGame() {
                               !state.battle.needsDie
                             }
                             creature={creature}
-                            ownerPool={state.battle.pools[creature.owner]}
                             active={creature.id === state.battle?.activeCreatureId}
                             target={creature.id === state.battle?.selectedTargetId}
                             onAbilityDragStart={(ability) => {

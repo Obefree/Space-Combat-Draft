@@ -35,7 +35,8 @@ test("server-renders the Space Combat Draft shell", async () => {
   assert.match(html, /случайно берутся 6 в руку/);
   assert.match(html, /3 корабля на старт/);
   assert.match(html, /2 раунда подкреплений по 1/);
-  assert.match(html, /общий пул своего игрока/);
+  assert.match(html, /резерв игрока/);
+  assert.match(html, /активный корабль заряжается ими на свою карту/);
   assert.match(html, /корабль завершает активацию до следующего раунда/);
   assert.match(html, /галерея карт/);
 });
@@ -59,6 +60,10 @@ test("keeps the space combat rules encoded in source", async () => {
   assert.match(source, /hand: deckA\.slice\(0, BATTLE_HAND_SIZE\)/);
   assert.match(source, /hand: deckB\.slice\(0, BATTLE_HAND_SIZE\)/);
   assert.match(source, /function confirmDeploymentSelection\(state: GameState\): GameState/);
+  assert.match(source, /function chargeActiveCreature\(state: GameState\): GameState/);
+  assert.match(source, /findPayment\(actor\.attached, ability\.cost\)/);
+  assert.match(source, /creature\.attached, ability\.cost/);
+  assert.match(source, /function ChargeRack/);
   assert.match(source, /phase: "deploy_select"/);
   assert.match(source, /function HandsOverview/);
   assert.match(source, /function CardInspectModal/);

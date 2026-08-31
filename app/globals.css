@@ -3109,6 +3109,46 @@ input:focus-visible,
   max-height: 132px;
 }
 
+.chargeRack {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 7px;
+  align-items: center;
+  min-height: 34px;
+  margin-bottom: 7px;
+  padding: 6px 7px;
+  border-color: rgba(124, 232, 255, 0.2);
+  border-radius: 9px;
+  background:
+    linear-gradient(135deg, rgba(124, 232, 255, 0.1), rgba(255, 209, 102, 0.08)),
+    rgba(3, 7, 13, 0.58);
+}
+
+.chargeRack strong {
+  color: rgba(255, 248, 236, 0.7);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chargeRack span {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  color: rgba(255, 248, 236, 0.54);
+  font-size: 0.72rem;
+}
+
+.chargeRack .die {
+  min-width: 27px;
+  min-height: 25px;
+  padding: 0 6px;
+  border-radius: 7px;
+  font-size: 0.76rem;
+}
+
 /* Deployment hand: one equal-height row, with details available through the zoomed card view. */
 .deploymentPanel .cardGrid {
   display: flex;
