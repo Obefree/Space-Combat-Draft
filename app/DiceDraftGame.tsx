@@ -1598,6 +1598,7 @@ function CardFrame({
         <div
           className={`frameArt ${onArtClick ? "frameArtButton" : ""}`}
           role={onArtClick ? "button" : undefined}
+          aria-label={onArtClick ? "Открыть карту крупно" : undefined}
           tabIndex={onArtClick ? 0 : undefined}
           onClick={(event) => {
             if (!onArtClick) return;
@@ -1649,22 +1650,12 @@ function HandCardButton({
   const flavor = dominantDie(card);
   return (
     <button
-      className={`card handChoiceCard ${flavor} ${selected ? "selected" : ""}`}
+      className={`card compact handChoiceCard ${flavor} ${selected ? "selected" : ""}`}
       disabled={disabled && !selected}
       onClick={onClick}
       type="button"
     >
-      <CardFrame card={card} hpText={`${card.health}`} owner={owner} onArtClick={onInspect}>
-        {card.abilities.map((ability) => (
-          <p key={ability.id}>
-            <span className="abilityLineHead">
-              <b>{ability.name_ru}</b>
-              <AbilityImpact ability={ability} />
-            </span>
-            <span className="abilityRule">{ability.text_ru}</span>
-          </p>
-        ))}
-      </CardFrame>
+      <CardFrame card={card} compact hpText={`${card.health}`} owner={owner} onArtClick={onInspect} />
     </button>
   );
 }
