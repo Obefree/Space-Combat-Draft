@@ -2435,7 +2435,7 @@ input:focus-visible,
 }
 
 .seedBox div {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .seedBox input:not([type="range"]) {
@@ -2462,6 +2462,12 @@ input:focus-visible,
   border-color: rgba(169, 139, 255, 0.45);
   background: linear-gradient(180deg, #b9a4ff, #5c7df5);
   color: #090b16;
+}
+
+.seedBox .galleryToggle {
+  border-color: rgba(124, 232, 255, 0.42);
+  background: linear-gradient(180deg, #a9f4ff, #32a7d8);
+  color: #071018;
 }
 
 .modeHint,
@@ -2919,6 +2925,62 @@ input:focus-visible,
     #070a10;
 }
 
+.galleryBackdrop {
+  align-items: start;
+  overflow: auto;
+}
+
+.galleryModal {
+  width: min(1420px, 96vw);
+  margin: 18px 0;
+  max-height: none;
+  padding: 14px;
+  border: 1px solid rgba(124, 232, 255, 0.24);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(15, 24, 37, 0.98), rgba(5, 8, 14, 0.98)),
+    #070a10;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.62);
+}
+
+.galleryHead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: -14px -14px 14px;
+  padding: 14px;
+  border-bottom: 1px solid rgba(124, 232, 255, 0.16);
+  background: rgba(7, 10, 16, 0.92);
+  backdrop-filter: blur(16px);
+}
+
+.galleryHead h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.8rem;
+  line-height: 1.05;
+}
+
+.galleryHead .modalClose {
+  position: static;
+  float: none;
+  margin: 0;
+}
+
+.galleryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.galleryCard {
+  min-height: 520px;
+}
+
 .modalClose {
   border-radius: 10px;
 }
@@ -3007,6 +3069,23 @@ input:focus-visible,
 
   .battleShell .battleGrid {
     zoom: 1;
+  }
+
+  .galleryModal {
+    width: min(100%, 96vw);
+    margin: 8px 0;
+    padding: 10px;
+  }
+
+  .galleryHead {
+    align-items: stretch;
+    flex-direction: column;
+    margin: -10px -10px 10px;
+    padding: 10px;
+  }
+
+  .galleryGrid {
+    grid-template-columns: 1fr;
   }
 }
 

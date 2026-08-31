@@ -1854,6 +1854,52 @@ function CardInspectModal({
   );
 }
 
+function CardGalleryModal({
+  cards,
+  onClose,
+}: {
+  cards: CardData[];
+  onClose: () => void;
+}) {
+  return (
+    <div className="cardModalBackdrop galleryBackdrop">
+      <div
+        aria-modal="true"
+        className="galleryModal"
+        role="dialog"
+        aria-label="Галерея карт"
+      >
+        <div className="galleryHead">
+          <div>
+            <p className="eyebrow">Справочник флота</p>
+            <h2>Галерея карт</h2>
+          </div>
+          <button className="modalClose" type="button" onClick={onClose}>
+            закрыть
+          </button>
+        </div>
+        <div className="galleryGrid">
+          {cards.map((card) => (
+            <article className={`card galleryCard ${dominantDie(card)}`} key={card.id}>
+              <CardFrame card={card} hpText={`${card.health}`}>
+                {card.abilities.map((ability) => (
+                  <p key={ability.id}>
+                    <span className="abilityLineHead">
+                      <b>{ability.name_ru}</b>
+                      <AbilityImpact ability={ability} />
+                    </span>
+                    <span className="abilityRule">{ability.text_ru}</span>
+                  </p>
+                ))}
+              </CardFrame>
+            </article>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RulesGuide() {
   return (
     <section className="rulesGuide" aria-label="Правила и описание игры">
@@ -1962,6 +2008,7 @@ export function SpaceCombatGame() {
   const [gameScale, setGameScale] = useState(() => readStoredGameScale());
   const [armedAbilityId, setArmedAbilityId] = useState<string | null>(null);
   const [draggedAbilityId, setDraggedAbilityId] = useState<string | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [inspectedCard, setInspectedCard] = useState<{
     card: CardData;
     owner?: PlayerId;
@@ -1991,13 +2038,16 @@ export function SpaceCombatGame() {
   }, [rulesMode]);
 
   useEffect(() => {
-    if (!inspectedCard) return;
+    if (!inspectedCard && !galleryOpen) return;
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setInspectedCard(null);
+      if (event.key === "Escape") {
+        setInspectedCard(null);
+        setGalleryOpen(false);
+      }
     }
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [inspectedCard]);
+  }, [inspectedCard, galleryOpen]);
 
   const activeCreature = useMemo(
     () => getCreature(state.players, state.battle?.activeCreatureId ?? null),
@@ -2006,6 +2056,10 @@ export function SpaceCombatGame() {
   const battleLine = useMemo(
     () => orderedBattleLine(state.players),
     [state.players],
+  );
+  const galleryCards = useMemo(
+    () => (cardsLoaded ? buildSymmetricDeck(cardsForRulesMode(fullCards, rulesMode)) : []),
+    [cardsLoaded, fullCards, rulesMode],
   );
   const activeAbility =
     activeCreature?.card.abilities.find(
@@ -2169,6 +2223,14 @@ export function SpaceCombatGame() {
               onClick={() => switchRulesMode(rulesMode === "light" ? "full" : "light")}
             >
               {rulesMode === "light" ? "Light включён" : "Light режим"}
+            </button>
+            <button
+              type="button"
+              className="galleryToggle"
+              disabled={!cardsLoaded}
+              onClick={() => setGalleryOpen(true)}
+            >
+              галерея карт
             </button>
           </div>
           <p className="modeHint">
@@ -2445,6 +2507,12 @@ export function SpaceCombatGame() {
           card={inspectedCard.card}
           owner={inspectedCard.owner}
           onClose={() => setInspectedCard(null)}
+        />
+      ) : null}
+      {galleryOpen ? (
+        <CardGalleryModal
+          cards={galleryCards}
+          onClose={() => setGalleryOpen(false)}
         />
       ) : null}
     </main>
