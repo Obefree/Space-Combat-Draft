@@ -3013,3 +3013,29 @@ input:focus-visible,
     zoom: 1;
   }
 }
+
+/* Battle layout fix: keep the ship line full-width and move the log below it. */
+.battleGrid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.battlePanel {
+  grid-column: 1;
+}
+
+.notes {
+  position: static;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  margin-top: 0;
+}
+
+.notes ol,
+.notes ul {
+  max-height: 132px;
+}
+
+@media (max-width: 760px) {
+  .notes {
+    grid-template-columns: 1fr;
+  }
+}
