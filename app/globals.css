@@ -24,6 +24,7 @@ html {
 }
 
 body {
+  position: relative;
   min-height: 100vh;
   margin: 0;
   background:
@@ -34,6 +35,18 @@ body {
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(160deg, rgba(12, 10, 18, 0.74), rgba(9, 14, 24, 0.86)),
+    url("/card-art/space/space-card-cover-v1.png") center top / cover no-repeat;
+  opacity: 0.46;
 }
 
 button,
@@ -65,6 +78,8 @@ button:disabled {
 }
 
 .shell {
+  position: relative;
+  z-index: 1;
   width: min(1180px, 100%);
   margin: 0 auto;
   padding: 18px;
@@ -113,7 +128,7 @@ button:disabled {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 210px) minmax(260px, 360px);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
   gap: 18px;
   align-items: end;
   padding: 24px;
@@ -139,42 +154,6 @@ button:disabled {
   font-size: 0.76rem;
   font-weight: 900;
   letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.coverPreview {
-  position: relative;
-  align-self: stretch;
-  min-height: 230px;
-  margin: 0;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 18px;
-  background: rgba(0, 0, 0, 0.26);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.coverPreview img {
-  width: 100%;
-  height: 100%;
-  min-height: 230px;
-  display: block;
-  object-fit: cover;
-}
-
-.coverPreview figcaption {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
-  padding: 7px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 999px;
-  background: rgba(4, 8, 17, 0.68);
-  color: rgba(255, 248, 236, 0.88);
-  font-size: 0.72rem;
-  font-weight: 900;
-  text-align: center;
   text-transform: uppercase;
 }
 
@@ -1166,14 +1145,6 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
-  .coverPreview {
-    min-height: 260px;
-  }
-
-  .coverPreview img {
-    min-height: 260px;
-  }
-
   .rulesGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1213,10 +1184,6 @@ button:disabled {
   .battleShell .hero {
     grid-template-columns: 1fr;
     padding: 10px;
-  }
-
-  .battleShell .coverPreview {
-    display: none;
   }
 
   .battleShell .hero h1 {
