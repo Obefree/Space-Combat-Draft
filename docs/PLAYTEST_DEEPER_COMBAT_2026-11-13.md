@@ -3,7 +3,7 @@
 Date: 2026-11-13. Status: **experimental; not published or integrated into the battle engine**.
 
 ## Findings
-Current ships: 10 prototypes in a symmetric deck, 6 drawn, 3 deployed, 1 reinforcement after each of two rounds: only 5 enter. The dice economy is two separate player-wide pools; there are no targetable formations or fleet-zone reactions yet.
+Current ships: 10 prototypes in a symmetric deck, 6 drawn, 3 deployed, 1 reinforcement after each of two rounds: only 5 enter **on main**. This branch patches the actual app to deploy all six as 3+2+1. The dice economy is two separate player-wide pools; there are no targetable formations or fleet-zone reactions yet.
 
 ## Six new candidates
 - **Сторожевой дрон** (initiative 9, HP 2, Glory 1; dice attack, attack, magic): Быстрый импульс — ⚔2: 1 урон врагу, создать 🛡1.; Сигнальная ловушка — ⚔+✦4: украсть заряд 1–2.
