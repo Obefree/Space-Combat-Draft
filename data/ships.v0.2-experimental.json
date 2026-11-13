@@ -1,0 +1,336 @@
+{
+  "schema_version": "0.1-experimental",
+  "card_set_version": "v0.5-experimental",
+  "status": "additive_not_deployed",
+  "comment_ru": "Набор дополнительных карт; не заменяет старые и не подключён к опубликованной игре",
+  "cards": [
+    {
+      "id": "sentry_drone",
+      "name_ru": "Сторожевой дрон",
+      "initiative": 9,
+      "health": 2,
+      "glory": 1,
+      "dice": [
+        "attack",
+        "attack",
+        "magic"
+      ],
+      "art": "/card-art/space/interceptor.svg",
+      "abilities": [
+        {
+          "id": "snap",
+          "name_ru": "Быстрый импульс",
+          "text_ru": "⚔2: 1 урон врагу, создать 🛡1.",
+          "cost": {
+            "threshold": 2,
+            "requirements": {
+              "attack": 1
+            }
+          },
+          "effects": [
+            {
+              "type": "damage",
+              "amount": 1,
+              "target": "enemy"
+            },
+            {
+              "type": "gain_die",
+              "die_type": "defense",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "jam",
+          "name_ru": "Сигнальная ловушка",
+          "text_ru": "⚔+✦4: украсть заряд 1–2.",
+          "cost": {
+            "threshold": 4,
+            "requirements": {
+              "attack": 1,
+              "magic": 1
+            }
+          },
+          "effects": [
+            {
+              "type": "steal_enemy_die",
+              "value_max": 2,
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ion_corvette",
+      "name_ru": "Ионный корвет",
+      "initiative": 7,
+      "health": 4,
+      "glory": 2,
+      "dice": [
+        "magic",
+        "magic",
+        "attack"
+      ],
+      "art": "/card-art/space/science-vessel.svg",
+      "abilities": [
+        {
+          "id": "jammer",
+          "name_ru": "Ионное глушение",
+          "text_ru": "✦2: ослабить заряд врага на 1.",
+          "cost": {
+            "threshold": 2,
+            "requirements": {
+              "magic": 1
+            }
+          },
+          "effects": [
+            {
+              "type": "decrease_target_die",
+              "amount": 1,
+              "min": 1
+            }
+          ]
+        },
+        {
+          "id": "hijack",
+          "name_ru": "Перехват частоты",
+          "text_ru": "✦+⚔4: украсть заряд 1–2.",
+          "cost": {
+            "threshold": 4,
+            "requirements": {
+              "magic": 1,
+              "attack": 1
+            }
+          },
+          "effects": [
+            {
+              "type": "steal_enemy_die",
+              "value_max": 2,
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fleet_tender",
+      "name_ru": "Корабль снабжения",
+      "initiative": 3,
+      "health": 6,
+      "glory": 4,
+      "dice": [
+        "defense",
+        "defense",
+        "magic"
+      ],
+      "art": "/card-art/space/carrier.svg",
+      "abilities": [
+        {
+          "id": "delivery",
+          "name_ru": "Боеприпасы",
+          "text_ru": "🛡2: создать ⚔1.",
+          "cost": {
+            "threshold": 2,
+            "requirements": {
+              "defense": 1
+            }
+          },
+          "effects": [
+            {
+              "type": "gain_die",
+              "die_type": "attack",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "repair",
+          "name_ru": "Ремонтные катера",
+          "text_ru": "🛡+✦4: лечить два корабля по 1.",
+          "cost": {
+            "threshold": 4,
+            "requirements": {
+              "defense": 1,
+              "magic": 1
+            }
+          },
+          "effects": [
+            {
+              "type": "heal_two_allies",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gravity_minelayer",
+      "name_ru": "Гравитационный заградитель",
+      "initiative": 4,
+      "health": 5,
+      "glory": 3,
+      "dice": [
+        "magic",
+        "magic",
+        "defense"
+      ],
+      "art": "/card-art/space/science-vessel.svg",
+      "abilities": [
+        {
+          "id": "disarm",
+          "name_ru": "Разбор заряда",
+          "text_ru": "✦2: сбросить вражеский заряд 1.",
+          "cost": {
+            "threshold": 2,
+            "requirements": {
+              "magic": 1
+            }
+          },
+          "effects": [
+            {
+              "type": "return_target_die_to_pool",
+              "value_max": 1
+            }
+          ]
+        },
+        {
+          "id": "minefield",
+          "name_ru": "Минное поле",
+          "text_ru": "✦+🛡4: 1 урон всем врагам, 1 себе.",
+          "cost": {
+            "threshold": 4,
+            "requirements": {
+              "magic": 1,
+              "defense": 1
+            }
+          },
+          "effects": [
+            {
+              "type": "damage_all_enemies",
+              "amount": 1
+            },
+            {
+              "type": "self_damage",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "assault_barge",
+      "name_ru": "Штурмовая баржа",
+      "initiative": 2,
+      "health": 7,
+      "glory": 4,
+      "dice": [
+        "attack",
+        "attack",
+        "defense",
+        "defense"
+      ],
+      "art": "/card-art/space/battleship.svg",
+      "abilities": [
+        {
+          "id": "broadside",
+          "name_ru": "Бортовой залп",
+          "text_ru": "⚔3: 2 урона врагу.",
+          "cost": {
+            "threshold": 3,
+            "requirements": {
+              "attack": 1
+            }
+          },
+          "effects": [
+            {
+              "type": "damage",
+              "amount": 2,
+              "target": "enemy"
+            }
+          ]
+        },
+        {
+          "id": "ram",
+          "name_ru": "Таранный разгон",
+          "text_ru": "⚔+🛡5: 3 урона врагу, 1 себе.",
+          "cost": {
+            "threshold": 5,
+            "requirements": {
+              "attack": 1,
+              "defense": 1
+            }
+          },
+          "effects": [
+            {
+              "type": "damage",
+              "amount": 3,
+              "target": "enemy"
+            },
+            {
+              "type": "self_damage",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "signal_relay",
+      "name_ru": "Ретранслятор флота",
+      "initiative": 5,
+      "health": 4,
+      "glory": 3,
+      "dice": [
+        "defense",
+        "magic",
+        "magic"
+      ],
+      "art": "/card-art/space/command-cruiser.svg",
+      "abilities": [
+        {
+          "id": "uplink",
+          "name_ru": "Перезапуск связи",
+          "text_ru": "✦2: создать ✦2.",
+          "cost": {
+            "threshold": 2,
+            "requirements": {
+              "magic": 1
+            }
+          },
+          "effects": [
+            {
+              "type": "gain_die",
+              "die_type": "magic",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "coordinate",
+          "name_ru": "Перенастройка щитов",
+          "text_ru": "🛡+✦4: лечение союзника 1 и усиление куба 1.",
+          "cost": {
+            "threshold": 4,
+            "requirements": {
+              "defense": 1,
+              "magic": 1
+            }
+          },
+          "effects": [
+            {
+              "type": "heal",
+              "amount": 1,
+              "target": "ally"
+            },
+            {
+              "type": "increase_target_ally_die",
+              "amount": 1,
+              "max": 3
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
