@@ -111,7 +111,7 @@ const DIE_FACE_VALUES = [1, 1, 2, 2, 3, 3];
 const PLAYER_DECK_SIZE = 10;
 const OPENING_CARDS_PER_PLAYER = 3;
 const REINFORCEMENT_ROUNDS = 2;
-const REINFORCEMENTS_PER_ROUND = 1;
+const REINFORCEMENTS_PER_ROUND = 2;
 const BATTLE_HAND_SIZE = 6;
 const DEFAULT_SEED_TEXT = "playtest-01";
 
@@ -2288,7 +2288,7 @@ export function SpaceCombatGame() {
           <p>
             Альтернативный тест для космической 4X: у каждого игрока симметричная колода из 10 карт,
             перед боем случайно берутся 6 в руку. Игрок сам выбирает 3 корабля на старт, затем
-            ещё 2 раунда подкреплений по 1 кораблю, а кубы сначала идут в резерв игрока,
+            два раунда подкреплений: до 2 кораблей и оставшийся 1, а кубы сначала идут в резерв игрока,
             затем активный корабль заряжается ими на свою карту.
           </p>
           <div className="heroMetrics" aria-label="Параметры партии">
@@ -2297,7 +2297,7 @@ export function SpaceCombatGame() {
               карт в руке
             </span>
             <span>
-              <strong>3+2</strong>
+              <strong>3+2+1</strong>
               выхода кораблей
             </span>
             <span>
