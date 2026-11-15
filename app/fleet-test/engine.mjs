@@ -9,12 +9,12 @@ export const CARD_TYPES = [
   { id: "combined", name: "Общий резерв", dice: ["attack", "defense"], hint: "Универсальный запас" },
 ];
 export const UNIT_TYPES = {
-  scout: { name: "Разведчик", initiative: 8, hp: 4, art: "/card-art/space/generated/swift_blade.png", ability: "Сенсорный импульс", cost: "✦2+ → повысить другой куб на 2 (макс. 3)", module: "Начало боя: +1 ✦" },
-  destroyer: { name: "Эсминец", initiative: 5, hp: 6, art: "/card-art/space/generated/huntress.png", ability: "Торпедная связка", cost: "⚔ + ✦, сумма 4+ → 3 урона", module: "Модуль: торпедные аппараты" },
-  cruiser: { name: "Крейсер", initiative: 3, hp: 8, art: "/card-art/space/generated/mercenary_captain.png", ability: "Бортовой залп", cost: "⚔ + ⚔, сумма 4+ → 4 урона", module: "Модуль: батарея тяжёлого огня" },
-  interceptor: { name: "Перехватчик", initiative: 7, hp: 4, art: "/card-art/space/generated/raider.png", ability: "Ракетный заход", cost: "⚔2+ → значение куба +1 урона", module: "Начало боя: +1 ⚔" },
-  frigate: { name: "Фрегат", initiative: 4, hp: 6, art: "/card-art/space/generated/bodyguard.png", ability: "Плотный заслон", cost: "🛡2+ → значение куба +2 щита флоту", module: "Модуль: усиленный щит" },
-  dreadnought: { name: "Дредноут", initiative: 2, hp: 8, art: "/card-art/space/generated/old_veteran.png", ability: "Осадный разряд", cost: "⚔ + ⚔ + ✦, сумма 6+ → 6 урона", module: "Модуль: осадный реактор" },
+  scout: { name: "Разведчик", initiative: 8, glory: 7, hp: 4, art: "/card-art/space/generated/swift_blade.png", ability: "Сенсорный импульс", cost: "✦2+ → повысить другой куб на 2 (макс. 3)", module: "Начало боя: +1 ✦" },
+  destroyer: { name: "Эсминец", initiative: 5, glory: 3, hp: 6, art: "/card-art/space/generated/huntress.png", ability: "Торпедная связка", cost: "⚔ + ✦, сумма 4+ → 4 урона", module: "Модуль: торпедные аппараты" },
+  cruiser: { name: "Крейсер", initiative: 3, glory: 1, hp: 8, art: "/card-art/space/generated/mercenary_captain.png", ability: "Бортовой залп", cost: "⚔ + ⚔, сумма 4+ → 5 урона", module: "Модуль: батарея тяжёлого огня" },
+  interceptor: { name: "Перехватчик", initiative: 7, glory: 5, hp: 4, art: "/card-art/space/generated/raider.png", ability: "Ракетный заход", cost: "⚔2+ → урон равен значению куба", module: "Начало боя: +1 ⚔" },
+  frigate: { name: "Фрегат", initiative: 4, glory: 4, hp: 6, art: "/card-art/space/generated/bodyguard.png", ability: "Плотный заслон", cost: "🛡2+ → значение куба +1 щита флоту", module: "Модуль: усиленный щит" },
+  dreadnought: { name: "Дредноут", initiative: 2, glory: 2, hp: 8, art: "/card-art/space/generated/old_veteran.png", ability: "Осадный разряд", cost: "⚔ + ⚔ + ✦, сумма 6+ → 6 урона", module: "Модуль: осадный реактор" },
 };
 const ORDER = { A: ["scout", "destroyer", "cruiser"], B: ["interceptor", "frigate", "dreadnought"] };
 // Each existing ship contributes one starting die; scout/interceptor modules contribute a bonus die.
@@ -42,10 +42,12 @@ function msg(g, text) { g.log.unshift(text); g.log = g.log.slice(0, 45); }
 function clone(g) { return structuredClone(g); }
 export function other(side) { return side === "A" ? "B" : "A"; }
 export function fleetHp(f) { return f.units.reduce((sum, u) => sum + u.hp, 0); }
+export function victoryPoints(f) { return f.units.reduce((sum, u) => sum + (u.hp > 0 ? u.glory : 0), 0); }
+export function fleetLosses(f) { return f.units.filter(u => u.hp <= 0).length; }
 export function turnOf(g) { return g.phase === "activate" ? g.queue[g.index] || null : null; }
 export function aliveUnits(f) { return f.units.filter(u => u.hp > 0); }
 export function createGame(seed = "battle-01", mode = "solo") {
-  const g = { rng: hash(seed), seed, mode, round: 1, phase: "draft", drafting: "A", placing: "A", queue: [], index: 0, pending: null, winner: null, specialUsed: { A: [], B: [] }, nextDie: 0, log: [], fleets: {} };
+  const g = { rng: hash(seed), seed, mode, round: 1, phase: "draft", drafting: "A", placing: "A", queue: [], index: 0, pending: null, winner: null, result: null, specialUsed: { A: [], B: [] }, nextDie: 0, log: [], fleets: {} };
   for (const side of ["A", "B"]) {
     const cards = CARD_TYPES.flatMap(t => [0, 1].map(copyNumber => ({ id: side + "-" + t.id + "-" + copyNumber, type: t.id, name: t.name, dice: [...t.dice], hint: t.hint })));
     // Faction B emphasizes heavy assault; A has an extra technological option.
@@ -64,7 +66,7 @@ export function createGame(seed = "battle-01", mode = "solo") {
       shield: 0,
       units: ORDER[side].map((role, i) => ({
         id: side + "-" + role, role, hp: UNIT_TYPES[role].hp, maxHp: UNIT_TYPES[role].hp,
-        initiative: UNIT_TYPES[role].initiative, art: UNIT_TYPES[role].art,
+        initiative: UNIT_TYPES[role].initiative, glory: UNIT_TYPES[role].glory, art: UNIT_TYPES[role].art,
       })),
     };
   }
@@ -169,14 +171,28 @@ function applyDamage(g, hit) {
   msg(g, defender.name + ": " + UNIT_TYPES[unit.role].name + " получает " + actual + " урона" + (unit.hp ? "" : " и уничтожен") + ".");
 }
 function victory(g) {
-  const a = fleetHp(g.fleets.A), b = fleetHp(g.fleets.B);
-  if (a === 0 || b === 0 || (g.round === MAX_ROUND && g.index >= g.queue.length)) {
-    g.phase = "done"; g.pending = null;
-    g.winner = a === b ? "draw" : a > b ? "A" : "B";
-    msg(g, "Бой закончен: " + (g.winner === "draw" ? "ничья" : "побеждает " + g.fleets[g.winner].name) + ".");
-    return true;
-  }
-  return false;
+  const aAlive = aliveUnits(g.fleets.A).length;
+  const bAlive = aliveUnits(g.fleets.B).length;
+  const roundEnded = g.round === MAX_ROUND && g.index >= g.queue.length;
+  if (aAlive > 0 && bAlive > 0 && !roundEnded) return false;
+
+  // HP is never a victory tiebreaker. Only the glory of SURVIVING ships counts.
+  const a = victoryPoints(g.fleets.A), b = victoryPoints(g.fleets.B);
+  const mutual = aAlive === 0 && bAlive === 0;
+  const wiped = aAlive === 0 || bAlive === 0;
+  const kind = mutual ? "mutual-annihilation" : wiped ? "annihilation" : a === b ? "draw" : "points";
+  g.winner = a === b ? "draw" : a > b ? "A" : "B";
+  g.result = { kind, scoreA:a, scoreB:b, lostA:fleetLosses(g.fleets.A),
+    lostB:fleetLosses(g.fleets.B), initialA:g.fleets.A.units.length,
+    initialB:g.fleets.B.units.length, round:g.round };
+  g.phase = "done";
+  g.pending = null;
+  const label = kind === "mutual-annihilation" ? "взаимное уничтожение" :
+    kind === "annihilation" ? "полное уничтожение флота" :
+    kind === "draw" ? "ничья по победным очкам" : "победа по очкам выживших кораблей";
+  msg(g, "Бой окончен: " + label + ". Очки " + a + ":" + b +
+    ", потери " + g.result.lostA + ":" + g.result.lostB + ".");
+  return true;
 }
 function advance(g) {
   if (victory(g)) return;
@@ -263,10 +279,10 @@ export function tryAction(state, action) {
   else if (action.kind === "tune" && typesAre(dice, ["tech"])) boost = 1;
   else if (action.kind === "special") {
     if (unit.role === "scout" && typesAre(dice, ["tech"]) && dice[0].value >= 2) boost = 2;
-    else if (unit.role === "interceptor" && typesAre(dice, ["attack"]) && dice[0].value >= 2) hit = dice[0].value + 1;
-    else if (unit.role === "destroyer" && typesAre(dice, ["attack", "tech"]) && sum >= 4) hit = 3;
-    else if (unit.role === "frigate" && typesAre(dice, ["defense"]) && dice[0].value >= 2) barrier = dice[0].value + 2;
-    else if (unit.role === "cruiser" && typesAre(dice, ["attack", "attack"]) && sum >= 4) hit = 4;
+    else if (unit.role === "interceptor" && typesAre(dice, ["attack"]) && dice[0].value >= 2) hit = dice[0].value;
+    else if (unit.role === "destroyer" && typesAre(dice, ["attack", "tech"]) && sum >= 4) hit = 4;
+    else if (unit.role === "frigate" && typesAre(dice, ["defense"]) && dice[0].value >= 2) barrier = dice[0].value + 1;
+    else if (unit.role === "cruiser" && typesAre(dice, ["attack", "attack"]) && sum >= 4) hit = 5;
     else if (unit.role === "dreadnought" && typesAre(dice, ["attack", "attack", "tech"]) && sum >= 6) hit = 6;
     else return state;
   } else return state;
