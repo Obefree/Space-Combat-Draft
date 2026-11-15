@@ -53,7 +53,7 @@ Spent dice disappear from the pool. Unspent dice remain with their rolled values
 | Крейсер | 3 | 8 | **1** | ⚔ + ⚔, Σ≥4 → **5 damage** |
 
 | Faction B | Initiative | HP | Survivor VP ★ | Unique special |
-|---|---:|---:|---|
+|---|---:|---:|---:|---|
 | Перехватчик | 7 | 4 | **5** | ⚔2+ → **die face damage** |
 | Фрегат | 4 | 6 | **4** | 🛡2+ → **die face+1 shields** |
 | Дредноут | 2 | 8 | **2** | ⚔ + ⚔ + ✦, Σ≥6 → 6 damage |
