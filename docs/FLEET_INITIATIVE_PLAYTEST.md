@@ -17,7 +17,7 @@ No separate maneuver deck, no random arrival of ships, no alternative currencies
 | Тактический манёвр | 🛡 ✦ | Defensive and conversion tempo |
 | Общий резерв | ⚔ 🛡 | Flexible middle ground |
 
-**Faction difference in this first test:** one copy of Общий резерв is changed for A to ✦🛡 and for B to ⚔⚔. This is a deliberately minimal asymmetry, not the final factions or upgrade tree.
+**Faction difference (balanced playtest):** one League copy of Общий резерв becomes ⚔✦; the Hegemony keeps its copies at ⚔🛡. Both factions have exactly ten cards generating twenty dice in total if all ten are counted. League deck: 8 ⚔, 7 🛡, 5 ✦; Hegemony: 8 ⚔, 8 🛡, 4 ✦. This is deliberately small asymmetry, not a final tech tree.
 
 ### Card deployment and initiative track
 - Start of round 1: choose **3 out of 5** dealt cards. Immediately roll their six dice.
@@ -46,22 +46,24 @@ On its command slot, a ship may:
 Spent dice disappear from the pool. Unspent dice remain with their rolled values between rounds. Dice are never replenished except by introducing a new card or an explicit ship ability.
 
 ### Fleets in the initial scenario (ship art reused from existing Space Combat Draft)
-| Faction A | Initiative | HP | Unique special |
-|---|---:|---:|---|
-| Разведчик | 8 | 4 | ✦2+: increase one other die by 2 |
-| Эсминец | 5 | 6 | ⚔ + ✦, Σ≥4 → 3 damage |
-| Крейсер | 3 | 8 | ⚔ + ⚔, Σ≥4 → 4 damage |
+| Faction A | Initiative | HP | Survivor VP ★ | Unique special |
+|---|---:|---:|---:|---|
+| Разведчик | 8 | 4 | **6** | ✦2+: increase one other die by 2 |
+| Эсминец | 5 | 6 | **4** | ⚔ + ✦, Σ≥4 → **4 damage** |
+| Крейсер | 3 | 8 | **1** | ⚔ + ⚔, Σ≥4 → **5 damage** |
 
-| Faction B | Initiative | HP | Unique special |
+| Faction B | Initiative | HP | Survivor VP ★ | Unique special |
 |---|---:|---:|---|
-| Перехватчик | 7 | 4 | ⚔2+ → die face+1 damage |
-| Фрегат | 4 | 6 | 🛡2+ → die face+2 shields |
-| Дредноут | 2 | 8 | ⚔ + ⚔ + ✦, Σ≥6 → 6 damage |
+| Перехватчик | 7 | 4 | **5** | ⚔2+ → **die face damage** |
+| Фрегат | 4 | 6 | **4** | 🛡2+ → **die face+1 shields** |
+| Дредноут | 2 | 8 | **2** | ⚔ + ⚔ + ✦, Σ≥6 → 6 damage |
 
 All six ships can attack with ordinary ⚔ dice; none is merely a bonus provider.
 
 ### Battle end and limitations
-- Three rounds or destruction of one side. The winner has the larger remaining total fleet HP (tie possible).
+- **Three rounds or elimination of all ships on one side.** The winner is the player with **more ★ Victory Points from surviving ships**. Destroyed ships award zero. **HP is never used as victory score or as a tiebreaker.**
+- Each fleet begins with **11 maximum survivor-VP**. Large, hard-to-kill ships award only **1–2 VP**; vulnerable ships give 5–6 VP. This makes preserving light ships strategically valuable without turning hardiness into automatic victory.
+- Separate final outcomes: points decision, drawn points, complete annihilation of a fleet, mutual annihilation (the engine can classify simultaneous loss, although the current single-target attack rules do not naturally create it).
 - All actual ships in the battle are chosen by the 4X layer. In this prototype the input is a fixed three-ship lineup per side.
 - Single-player vs simple scripted AI, or hotseat.
 - Currently no realtime multiplayer, moveable ship positions, long-range distinction or full technology tree.
@@ -69,3 +71,9 @@ All six ships can attack with ordinary ⚔ dice; none is merely a bonus provider
 - **Deployment note:** Public spacecombat.obefree.com is hosted in ChatGPT Sites; GitHub branch commits do not prove a live deployment. To publish into that existing project, use its canonical Sites editor/hosting access, preserving the original route.
 - Run local engine tests: \`node --test tests/fleet-initiative.test.mjs\`.
 - App build command (when the project environment and deps are available): \`npm run build\`.
+
+## Balance verification (2026-11-15)
+
+- Run reproducible multi-policy test: `npm run balance:fleet` (1500 seeded matches: 250 across each of six strategies), or `node scripts/fleet-balance.mjs 1000` for 1000 games **per strategy**.
+- Current sample: League 631, Hegemony 799, draws 70 / 1500. Average 2.176 destroyed ships per match; 13 complete League wipes and 1 complete Hegemony wipe. See `docs/FLEET_BALANCE_REPORT.md` for exact scripts, assumptions and by-strategy breakdown.
+- This is a **provisional playable balance**, not a claim that both factions are equally strong for every individual targeting tactic. Keep original `/` and classic combat untouched.
