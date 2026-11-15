@@ -54,8 +54,13 @@ export function createGame(seed = "battle-01", mode = "solo") {
     // one League "combined" copy becomes ⚔✦ (mobility),
     // Hegemony retains ⚔🛡 (security). Both still receive exactly two dice.
     const swap = cards.find(c => c.type === "combined" && c.id.endsWith("-1"));
-    if (side === "A") swap.dice = ["attack", "tech"];
-    else swap.dice = ["attack", "defense"];
+    if (side === "A") {
+      swap.dice = ["attack", "tech"];
+      swap.hint = "Огонь и технологическая гибкость";
+    } else {
+      swap.dice = ["attack", "defense"];
+      swap.hint = "Атака и щит";
+    }
     for (let i = cards.length - 1; i > 0; i--) {
       const j = Math.floor(roll(g) * (i + 1));
       [cards[i], cards[j]] = [cards[j], cards[i]];
