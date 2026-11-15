@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { CARD_TYPES, DIE_SYMBOL, UNIT_TYPES, aiActionChoice, aiDraftChoice, aiReactionChoice, aliveUnits, chooseCards, createGame, fleetHp, other, resolveReaction, tryAction, turnOf } from "./engine.mjs";
+import { CARD_TYPES, DIE_SYMBOL, UNIT_TYPES, aiActionChoice, aiDraftChoice, aiReactionChoice, aliveUnits, chooseCards, createGame, fleetHp, other, placeCards, suggestedAssignments, resolveReaction, tryAction, turnOf } from "./engine.mjs";
 import "./fleet-test.css";
 
 function DiceSymbol({ type, value }) { return <span className={"ftSymbol ft-" + type}>{DIE_SYMBOL[type]}{value || ""}</span>; }
@@ -23,22 +23,29 @@ export default function FleetTestPage() {
   const [game, setGame] = useState(() => createGame("battle-01","solo"));
   const [picked, setPicked] = useState([]);
   const [selected, setSelected] = useState([]);
+  const [placements, setPlacements] = useState({});
   const [target, setTarget] = useState("");
   const [error, setError] = useState("");
   const turn = turnOf(game);
-  const activeSide = game.phase === "draft" ? game.drafting : game.phase === "react" ? game.pending?.defender : turn?.side;
-  const ai = mode === "solo" && activeSide === "B";
+  const activeSide = game.phase === "draft" ? game.drafting : game.phase === "place" ? game.placing : game.phase === "react" ? game.pending?.defender : turn?.side;
+  const ai = game.mode === "solo" && activeSide === "B";
   const myFleet = activeSide ? game.fleets[activeSide] : null;
   const opponent = turn ? game.fleets[other(turn.side)] : null;
   const actualTarget = opponent?.units.find(u => u.id === target && u.hp > 0)?.id || opponent?.units.find(u => u.hp > 0)?.id || "";
   const selectedCardsNeed = game.round === 1 ? 3 : 1;
-  const nextQueue = useMemo(() => game.queue.slice(game.index, game.index + 8).filter(q => game.fleets[q.side].units.some(u => u.id === q.id && u.hp > 0)), [game]);
+  const proposed = game.phase === "place" ? { ...suggestedAssignments(game, game.placing), ...placements } : {};
+  const rowPreview = game.phase === "place" ? game.fleets[game.placing].activeCards.map(card => ({
+    card, unit: game.fleets[game.placing].units.find(u => u.id === proposed[card.id])
+  })).sort((a,b) => (b.unit?.initiative || 0) - (a.unit?.initiative || 0)) : [];
+  const nextQueue = useMemo(() => game.queue.slice(game.index, game.index + 12).filter(q => game.fleets[q.side].units.some(u => u.id === q.id && u.hp > 0)), [game]);
 
   useEffect(() => {
     if (game.mode !== "solo") return;
     let timer;
     if (game.phase === "draft" && game.drafting === "B") {
       timer = setTimeout(() => { setGame(g => chooseCards(g, aiDraftChoice(g))); setPicked([]); setSelected([]); }, 400);
+    } else if (game.phase === "place" && game.placing === "B") {
+      timer = setTimeout(() => { setGame(g => placeCards(g, suggestedAssignments(g,"B"))); setPlacements({}); setSelected([]); }, 430);
     } else if (game.phase === "activate" && turn?.side === "B") {
       timer = setTimeout(() => { setGame(g => tryAction(g, aiActionChoice(g))); setSelected([]); }, 650);
     } else if (game.phase === "react" && game.pending?.defender === "B") {
@@ -47,12 +54,17 @@ export default function FleetTestPage() {
     return () => clearTimeout(timer);
   }, [game, turn]);
 
-  function reset() { setGame(createGame(seed, mode)); setPicked([]); setSelected([]); setTarget(""); setError(""); }
+  function reset() { setGame(createGame(seed, mode)); setPicked([]); setSelected([]); setPlacements({}); setTarget(""); setError(""); }
   function pickCard(id) { setPicked(v => v.includes(id) ? v.filter(x => x !== id) : v.length < selectedCardsNeed ? [...v,id] : selectedCardsNeed === 1 ? [id] : v); }
   function confirm() {
     const next = chooseCards(game, picked);
     if (next === game) { setError("Нужно выбрать " + selectedCardsNeed + " карт."); return; }
-    setGame(next);setPicked([]);setSelected([]);setError("");
+    setGame(next);setPicked([]);setSelected([]);setPlacements({});setError("");
+  }
+  function commitPlacement() {
+    const next = placeCards(game, proposed);
+    if (next === game) { setError("Не больше двух активаций на корабль. Излишние карты можно оставить в резерве."); return; }
+    setGame(next); setPlacements({}); setSelected([]); setError("");
   }
   function pickDie(id) { setSelected(v => v.includes(id) ? v.filter(x => x !== id) : v.length >= 3 ? [...v.slice(1),id] : [...v,id]); }
   function act(kind) {
@@ -70,7 +82,7 @@ export default function FleetTestPage() {
   return <main className="ftRoot">
     <header className="ftTop">
       <div className="ftIntro"><a href="/" className="ftBack">← Старый космический драфт</a><div className="ftOverline">SPACE COMBAT DRAFT · НОВАЯ СЦЕНА</div>
-        <h1>Инициативный бой флотов</h1><p>Карты определяют кубы. Корабли сражаются по инициативе. Каждый потраченный куб уходит из пула.</p></div>
+        <h1>Инициативный бой флотов</h1><p>Карты становятся приказами в ряду инициативы. Корабли расходуют кубы или сохраняют их.</p></div>
       <div className="ftSettings"><label>Режим<select value={mode} onChange={e => setMode(e.target.value)}><option value="solo">Против компьютера</option><option value="hotseat">Два игрока рядом</option></select></label>
         <label>Seed<input value={seed} onChange={e => setSeed(e.target.value)}/></label><button className="ftPrimary" onClick={reset}>Новый бой</button></div>
     </header>
@@ -78,7 +90,7 @@ export default function FleetTestPage() {
     <div className="ftScore">
       <div><small>Раунд</small><strong>{game.round} / 3</strong></div>
       {["A","B"].map(s => <div key={s}><small>{name(s)}</small><strong>{fleetHp(game.fleets[s])} HP</strong><span>Щиты {game.fleets[s].shield} · Кубы {game.fleets[s].dice.length}</span></div>)}
-      <div><small>Этап</small><strong>{game.phase === "draft" ? "Карты" : game.phase === "activate" ? "Активация" : game.phase === "react" ? "Защита" : "Конец боя"}</strong></div>
+      <div><small>Этап</small><strong>{game.phase === "draft" ? "Карты" : game.phase === "place" ? "Инициатива" : game.phase === "activate" ? "Активация" : game.phase === "react" ? "Защита" : "Конец боя"}</strong></div>
     </div>
 
     <div className="ftColumns"><div className="ftGameplay">
@@ -91,14 +103,37 @@ export default function FleetTestPage() {
         </>}
       </section>}
 
+      {game.phase === "place" && <section className="ftPanel ftMainPanel">
+        <div className="ftPanelHead"><div><small>КОМАНДНЫЕ КАРТЫ → ШКАЛА ИНИЦИАТИВЫ</small>
+          <h2>{name(game.placing)} — назначь исполнителей</h2></div><span className="ftCounter">{myFleet.activeCards.length} карт</span></div>
+        {ai ? <p className="ftNotice">Компьютер размещает приказы на шкале инициативы…</p> : <>
+          <p>Каждая карта остаётся в ряду и даёт одну активацию за раунд. Очерёдность зависит от инициативы назначенного корабля. Не больше двух активаций на корабль.</p>
+          <div className="ftAssignments">{myFleet.activeCards.map(card => <label key={card.id} className="ftAssignment">
+            <span className="ftAssignmentCard"><b>{card.name}</b><span>{card.dice.map((d,i) => <DiceSymbol type={d} key={i}/>)}</span></span>
+            <select aria-label={"Исполнитель: "+card.name} value={proposed[card.id] || "reserve"}
+              onChange={e => setPlacements(v => ({...v, [card.id]: e.target.value}))}>
+              {aliveUnits(myFleet).map(u => <option key={u.id} value={u.id}>{UNIT_TYPES[u.role].name} (INI {u.initiative})</option>)}
+              <option value="reserve">Резерв без активации</option>
+            </select>
+          </label>)}</div>
+          <div className="ftTimeline"><h3>Предварительный ряд инициативы</h3>
+            <div className="ftQueue">{rowPreview.map(({card,unit}) => <span className="ftQueueChip" key={card.id}>
+              <b>{unit?.initiative || "—"}</b> {unit ? UNIT_TYPES[unit.role].name : "Резерв"} <small>{card.name}</small>
+            </span>)}</div></div>
+          <div className="ftActions"><button className="ftPrimary" onClick={commitPlacement}>Разместить приказы и начать раунд</button></div>
+        </>}
+        {!!error && <p role="status" className="ftError">{error}</p>}
+      </section>}
+
       {game.phase === "activate" && <section className="ftPanel ftMainPanel"><div className="ftPanelHead"><div><small>ХОД ПО ИНИЦИАТИВЕ · ВОЛНА {turn?.wave}</small><h2>{UNIT_TYPES[turn.role].name} — {name(turn.side)}</h2></div><span className="ftCounter">INI {turn.initiative}</span></div>
+        <div className="ftCommandNote">Приказ: <strong>{turn?.cardName}</strong> — одна активация. Особая способность корабля доступна один раз за раунд.</div>
         {ai ? <p className="ftNotice">Корабль противника выбирает действие…</p> : <>
           <p>Выбери кубы, затем действие корабля. Кубы списываются сразу. Для атаки нажми нужный корабль противника справа.</p>
           <h3>Ваш резерв <small>({myFleet.dice.length} кубов, выбрано {selected.length})</small></h3>
           <div className="ftDice">{myFleet.dice.map(d => <Die key={d.id} die={d} picked={selected.includes(d.id)} onClick={() => pickDie(d.id)}/>)}</div>
           <div className="ftSpecial"><b>{UNIT_TYPES[turn.role].ability}</b><span>{UNIT_TYPES[turn.role].cost}</span></div>
-          <div className="ftActions"><button className="ftPrimary" onClick={() => act("special")}>★ Особая способность</button><button onClick={() => act("fire")}>⚔ Выстрел</button><button onClick={() => act("brace")}>🛡 Поднять щит</button><button onClick={() => act("tune")}>✦ Улучшить куб</button><button onClick={() => act("pass")}>Пропустить</button></div>
-          <p className="ftFine">Выстрел: ⚔1–2 = 1 урон, ⚔3 = 2. Щит: 🛡 добавляет защиту по значению куба. ✦ увеличивает другой куб на 1.</p>
+          <div className="ftActions"><button className="ftPrimary" disabled={game.specialUsed[turn.side].includes(turn.id)} onClick={() => act("special")}>★ Особая способность</button><button onClick={() => act("fire")}>⚔ Выстрел</button><button onClick={() => act("brace")}>🛡 Поднять щит</button><button onClick={() => act("tune")}>✦ Улучшить куб</button><button onClick={() => act("pass")}>Пропустить</button></div>
+          <p className="ftFine">Выстрел: ⚔1–2 = 1 урон, ⚔3 = 2. Щиты поглощают входящий урон и исчезают в конце раунда. ✦ увеличивает другой куб на 1. Пропуск сохраняет кубы.</p>
         </>}
         {!!error && <p role="status" className="ftError">{error}</p>}
       </section>}
@@ -113,8 +148,8 @@ export default function FleetTestPage() {
 
       {game.phase === "done" && <section className="ftPanel ftMainPanel"><small>БОЙ ЗАВЕРШЁН</small><h2>{game.winner==="draw"?"Ничья":"Победила "+name(game.winner)}</h2><p>Лига Ориона: {fleetHp(game.fleets.A)} HP. Гегемония: {fleetHp(game.fleets.B)} HP.</p><button className="ftPrimary" onClick={reset}>Сыграть ещё раз</button></section>}
 
-      <section className="ftPanel"><h2>Очередь по инициативе</h2><div className="ftQueue">{nextQueue.length ? nextQueue.map((q,i)=><span className={"ftQueueChip"+(i===0?" ftQueueNow":"")} key={q.id+"-"+i}><b>{q.initiative}</b> {UNIT_TYPES[q.role].name} <small>{q.side}{q.wave===2?" • снова":""}</small></span>) : <p>Формируется после выбора карт обоими игроками.</p>}</div></section>
-      <section className="ftPanel"><h2>Введённые боевые карты</h2><div className="ftDeployed">{["A","B"].map(s=><div key={s}><h3>{name(s)} ({game.fleets[s].activeCards.length} активации)</h3><div className="ftCardMinis">{game.fleets[s].activeCards.map(c=><div key={c.id} className="ftCardMini"><b>{c.name}</b><span>{c.dice.map((d,i)=><DiceSymbol type={d} key={i}/>)}</span></div>)}</div></div>)}</div></section>
+      <section className="ftPanel"><h2>Очередь по инициативе</h2><div className="ftQueue">{nextQueue.length ? nextQueue.map((q,i)=><span className={"ftQueueChip"+(i===0?" ftQueueNow":"")} key={q.id+"-"+i}><b>{q.initiative}</b> {UNIT_TYPES[q.role].name} <small>{q.side} · {q.cardName}{q.wave===2?" · повтор":""}</small></span>) : <p>Формируется после выбора карт обоими игроками.</p>}</div></section>
+      <section className="ftPanel"><h2>Введённые боевые карты</h2><div className="ftDeployed">{["A","B"].map(s=><div key={s}><h3>{name(s)} ({game.fleets[s].activeCards.length} командных карт)</h3><div className="ftCardMinis">{game.fleets[s].activeCards.map(c=><div key={c.id} className="ftCardMini"><b>{c.name}</b><small>{UNIT_TYPES[game.fleets[s].units.find(u => u.id === c.assignedShipId)?.role]?.name || "В резерве"}</small><span>{c.dice.map((d,i)=><DiceSymbol type={d} key={i}/>)}</span></div>)}</div></div>)}</div></section>
     </div>
 
     <aside className="ftSidebar">{["A","B"].map(s=><section className={"ftPanel ftFleet ftFleet"+s} key={s}><div className="ftPanelHead"><h2>{name(s)}</h2><span className="ftCounter">{aliveUnits(game.fleets[s]).length}/3</span></div>
