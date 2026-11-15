@@ -17,7 +17,9 @@ export const UNIT_TYPES = {
   dreadnought: { name: "Дредноут", initiative: 2, hp: 8, art: "/card-art/space/generated/old_veteran.png", ability: "Осадный разряд", cost: "⚔ + ⚔ + ✦, сумма 6+ → 6 урона", module: "Модуль: осадный реактор" },
 };
 const ORDER = { A: ["scout", "destroyer", "cruiser"], B: ["interceptor", "frigate", "dreadnought"] };
-const START_DICE = { A: "tech", B: "attack" };
+// Each existing ship contributes one starting die; scout/interceptor modules contribute a bonus die.
+const SHIP_START_DICE = { scout: "tech", destroyer: "attack", cruiser: "attack", interceptor: "attack", frigate: "defense", dreadnought: "attack" };
+const MODULE_BONUS_DICE = { scout: "tech", interceptor: "attack" };
 const MAX_ROUND = 3;
 
 function hash(text) {
@@ -80,8 +82,13 @@ export function chooseCards(state, ids) {
   f.hand = f.hand.filter(c => !ids.includes(c.id));
   f.activeCards.push(...cards);
   for (const c of cards) for (const type of c.dice) addDie(g, side, type);
-  if (g.round === 1) addDie(g, side, START_DICE[side]);
-  msg(g, f.name + ": " + cards.map(c => "«" + c.name + "»").join(", ") + "; получено кубов: " + (cards.length * 2 + (g.round === 1 ? 1 : 0)) + ".");
+  if (g.round === 1) {
+    for (const ship of aliveUnits(f)) {
+      addDie(g, side, SHIP_START_DICE[ship.role]);
+      if (MODULE_BONUS_DICE[ship.role]) addDie(g, side, MODULE_BONUS_DICE[ship.role]);
+    }
+  }
+  msg(g, f.name + ": " + cards.map(c => "«" + c.name + "»").join(", ") + "; получено кубов: " + (cards.length * 2 + (g.round === 1 ? aliveUnits(f).length + aliveUnits(f).filter(u => MODULE_BONUS_DICE[u.role]).length : 0)) + ".");
   if (side === "A") g.drafting = "B";
   else { g.phase = "place"; g.placing = "A"; }
   return g;
@@ -93,7 +100,13 @@ export function suggestedAssignments(g, side) {
   const units = aliveUnits(g.fleets[side]);
   const assignments = {};
   const counts = Object.fromEntries(units.map(u => [u.id, 0]));
+  // Previous card placements stay in the row; new cards are added to available ships.
   for (const card of cards) {
+    const unit = units.find(u => u.id === card.assignedShipId);
+    if (unit && counts[unit.id] < 2) { assignments[card.id] = unit.id; counts[unit.id]++; }
+  }
+  for (const card of cards) {
+    if (assignments[card.id]) continue;
     const preferences = units.map(u => {
       const attack = card.dice.filter(d => d === "attack").length;
       const defense = card.dice.filter(d => d === "defense").length;
