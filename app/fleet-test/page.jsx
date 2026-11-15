@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { CARD_TYPES, DIE_SYMBOL, UNIT_TYPES, aiActionChoice, aiDraftChoice, aiReactionChoice, aliveUnits, chooseCards, createGame, fleetHp, other, placeCards, suggestedAssignments, resolveReaction, tryAction, turnOf } from "./engine.mjs";
+import { DIE_SYMBOL, UNIT_TYPES, aiActionChoice, aiDraftChoice, aiReactionChoice, aliveUnits, chooseCards, createGame, fleetHp, other, placeCards, suggestedAssignments, resolveReaction, tryAction, turnOf } from "./engine.mjs";
 import "./fleet-test.css";
 
 function DiceSymbol({ type, value }) { return <span className={"ftSymbol ft-" + type}>{DIE_SYMBOL[type]}{value || ""}</span>; }
