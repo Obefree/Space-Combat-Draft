@@ -43,7 +43,7 @@ export function fleetHp(f) { return f.units.reduce((sum, u) => sum + u.hp, 0); }
 export function turnOf(g) { return g.phase === "activate" ? g.queue[g.index] || null : null; }
 export function aliveUnits(f) { return f.units.filter(u => u.hp > 0); }
 export function createGame(seed = "battle-01", mode = "solo") {
-  const g = { rng: hash(seed), seed, mode, round: 1, phase: "draft", drafting: "A", queue: [], index: 0, pending: null, winner: null, nextDie: 0, log: [], fleets: {} };
+  const g = { rng: hash(seed), seed, mode, round: 1, phase: "draft", drafting: "A", placing: "A", queue: [], index: 0, pending: null, winner: null, specialUsed: { A: [], B: [] }, nextDie: 0, log: [], fleets: {} };
   for (const side of ["A", "B"]) {
     const cards = CARD_TYPES.flatMap(t => [0, 1].map(copyNumber => ({ id: side + "-" + t.id + "-" + copyNumber, type: t.id, name: t.name, dice: [...t.dice], hint: t.hint })));
     // Faction B emphasizes heavy assault; A has an extra technological option.
@@ -83,28 +83,68 @@ export function chooseCards(state, ids) {
   if (g.round === 1) addDie(g, side, START_DICE[side]);
   msg(g, f.name + ": " + cards.map(c => "«" + c.name + "»").join(", ") + "; получено кубов: " + (cards.length * 2 + (g.round === 1 ? 1 : 0)) + ".");
   if (side === "A") g.drafting = "B";
+  else { g.phase = "place"; g.placing = "A"; }
+  return g;
+}
+// Cards are command tokens on the initiative track. A token grants one action,
+// not a fresh dice roll. A ship can take at most two tokens per round.
+export function suggestedAssignments(g, side) {
+  const cards = g.fleets[side].activeCards;
+  const units = aliveUnits(g.fleets[side]);
+  const assignments = {};
+  const counts = Object.fromEntries(units.map(u => [u.id, 0]));
+  for (const card of cards) {
+    const preferences = units.map(u => {
+      const attack = card.dice.filter(d => d === "attack").length;
+      const defense = card.dice.filter(d => d === "defense").length;
+      const tech = card.dice.filter(d => d === "tech").length;
+      const synergy = u.role === "scout" ? tech * 2 : u.role === "frigate" ? defense * 2
+        : u.role === "destroyer" ? attack * 2 : u.role === "cruiser" || u.role === "dreadnought" ? attack * 2 + tech : attack * 2;
+      return { u, score: synergy - 4 * counts[u.id] + (card.assignedShipId === u.id ? 0.75 : 0) };
+    }).filter(p => counts[p.u.id] < 2).sort((a,b) => b.score - a.score || b.u.initiative - a.u.initiative);
+    const chosen = preferences[0]?.u;
+    assignments[card.id] = chosen ? chosen.id : "reserve";
+    if (chosen) counts[chosen.id]++;
+  }
+  return assignments;
+}
+export function placeCards(state, assignments) {
+  if (state.phase !== "place") return state;
+  const g = clone(state);
+  const side = g.placing, fleet = g.fleets[side];
+  if (!assignments || typeof assignments !== "object") return state;
+  const counts = {};
+  for (const card of fleet.activeCards) {
+    const target = assignments[card.id];
+    if (target !== "reserve" && !fleet.units.some(u => u.id === target && u.hp > 0)) return state;
+    if (target !== "reserve") {
+      counts[target] = (counts[target] || 0) + 1;
+      if (counts[target] > 2) return state;
+    }
+    card.assignedShipId = target;
+  }
+  msg(g, fleet.name + ": приказы выставлены на шкалу инициативы (" + fleet.activeCards.filter(c => c.assignedShipId !== "reserve").length + " активации).");
+  if (side === "A") g.placing = "B";
   else beginActivation(g);
   return g;
 }
 function beginActivation(g) {
   g.phase = "activate";
   g.queue = [];
-  const used = { A: {}, B: {} };
-  const remaining = { A: g.fleets.A.activeCards.length, B: g.fleets.B.activeCards.length };
-  for (let wave = 1; wave <= 2; wave++) {
-    const possible = ["A", "B"].flatMap(side => aliveUnits(g.fleets[side]).map(u => ({ side, id: u.id, role: u.role, initiative: u.initiative, wave })));
-    possible.sort((a, b) => b.initiative - a.initiative || a.side.localeCompare(b.side));
-    for (const entry of possible) {
-      if (remaining[entry.side] <= 0) continue;
-      const count = used[entry.side][entry.id] || 0;
-      if (count !== wave - 1) continue;
-      g.queue.push(entry);
-      used[entry.side][entry.id] = count + 1;
-      remaining[entry.side]--;
+  g.specialUsed = { A: [], B: [] };
+  for (const side of ["A", "B"]) {
+    const counts = {};
+    for (const card of g.fleets[side].activeCards) {
+      const unit = g.fleets[side].units.find(u => u.id === card.assignedShipId && u.hp > 0);
+      if (!unit) continue;
+      counts[unit.id] = (counts[unit.id] || 0) + 1;
+      g.queue.push({side, id:unit.id, role:unit.role, initiative:unit.initiative,
+        wave:counts[unit.id], cardId:card.id, cardName:card.name});
     }
   }
+  g.queue.sort((a,b) => a.wave - b.wave || b.initiative - a.initiative || a.side.localeCompare(b.side));
   g.index = 0;
-  msg(g, "Раунд " + g.round + ": инициатива определила очередь. Кубы из общего резерва тратятся без возврата.");
+  msg(g, "Раунд " + g.round + ": " + g.queue.length + " приказов в очереди инициативы. Один приказ = одна активация; можно пропустить, не расходуя кубы.");
   advance(g);
 }
 function applyDamage(g, hit) {
@@ -136,6 +176,9 @@ function advance(g) {
     g.index++;
   }
   if (g.round >= MAX_ROUND) { victory(g); return; }
+  g.fleets.A.shield = 0;
+  g.fleets.B.shield = 0;
+  msg(g, "Конец раунда: неистраченные временные щиты рассеиваются, кубы остаются.");
   g.round++;
   g.phase = "draft";
   g.drafting = "A";
@@ -193,8 +236,9 @@ export function tryAction(state, action) {
   const g = clone(state), turn = turnOf(g);
   const f = g.fleets[turn.side], unit = f.units.find(u => u.id === turn.id);
   if (!unit || unit.hp <= 0) { nextTurn(g); return g; }
+  if (action.kind === "special" && g.specialUsed[turn.side].includes(unit.id)) return state;
   if (action.kind === "pass") {
-    msg(g, UNIT_TYPES[unit.role].name + " (" + turn.side + ") пропускает активацию.");
+    msg(g, "«" + turn.cardName + "»: " + UNIT_TYPES[unit.role].name + " (" + turn.side + ") пропускает активацию, сохраняя кубы.");
     nextTurn(g); return g;
   }
   const dice = selectedDice(f, action.diceIds || []);
@@ -219,7 +263,8 @@ export function tryAction(state, action) {
 
   const payment = new Set(action.diceIds);
   f.dice = f.dice.filter(d => !payment.has(d.id));
-  msg(g, UNIT_TYPES[unit.role].name + " использует «" + (action.kind === "special" ? UNIT_TYPES[unit.role].ability : action.kind === "fire" ? "Стрельба" : action.kind === "brace" ? "Щит" : "Калибровка") + "»: " + dice.map(d => DIE_SYMBOL[d.type] + d.value).join(" + ") + ".");
+  if (action.kind === "special") g.specialUsed[turn.side].push(unit.id);
+  msg(g, "«" + turn.cardName + "» → " + UNIT_TYPES[unit.role].name + " использует «" + (action.kind === "special" ? UNIT_TYPES[unit.role].ability : action.kind === "fire" ? "Стрельба" : action.kind === "brace" ? "Щит" : "Калибровка") + "»: " + dice.map(d => DIE_SYMBOL[d.type] + d.value).join(" + ") + ".");
   if (barrier) {
     const before = f.shield;
     f.shield = Math.min(7, f.shield + barrier);
@@ -279,7 +324,7 @@ export function aiActionChoice(g) {
   };
   const priority = patterns[role];
   const special = priority ? candidates(d, priority[0], priority[1])[0] : null;
-  if (special && (role !== "frigate" || f.shield < 3)) return { kind: "special", diceIds: special.map(x => x.id), targetId: target.id };
+  if (special && !g.specialUsed.B.includes(turn.id) && (role !== "frigate" || f.shield < 3)) return { kind: "special", diceIds: special.map(x => x.id), targetId: target.id };
   const shot = candidates(d, ["attack"], 0)[0];
   if (shot) return { kind: "fire", diceIds: shot.map(x => x.id), targetId: target.id };
   const shield = candidates(d, ["defense"], 0)[0];
