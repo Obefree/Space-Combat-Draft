@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { DIE_SYMBOL, UNIT_TYPES, aiActionChoice, aiDraftChoice, aiReactionChoice, aliveUnits, chooseCards, createGame, fleetHp, other, placeCards, suggestedAssignments, resolveReaction, tryAction, turnOf } from "./engine.mjs";
+import { DIE_SYMBOL, UNIT_TYPES, aiActionChoice, aiDraftChoice, aiReactionChoice, aliveUnits, chooseCards, createGame, fleetHp, fleetLosses, victoryPoints, other, placeCards, suggestedAssignments, resolveReaction, tryAction, turnOf } from "./engine.mjs";
 import "./fleet-test.css";
 
 function DiceSymbol({ type, value }) { return <span className={"ftSymbol ft-" + type}>{DIE_SYMBOL[type]}{value || ""}</span>; }
@@ -8,8 +8,8 @@ function Die({ die, picked, disabled, onClick }) { return <button disabled={disa
 function Ship({ unit, side, current, target, queued, onClick, canTarget }) {
   const data = UNIT_TYPES[unit.role];
   return <button disabled={!canTarget || unit.hp <= 0} onClick={onClick} className={"ftShip" + (unit.hp <= 0 ? " ftDead" : "") + (current ? " ftCurrent" : "") + (target ? " ftTarget" : "")}>
-    <div className="ftShipImage"><img src={data.art} alt=""/><span>INI {unit.initiative}</span></div>
-    <div className="ftShipText"><b>{data.name}</b> <small>{side}</small><div className="ftHealth">{unit.hp}/{unit.maxHp} HP · {queued ? "ещё действует" : "ожидает"}</div>
+    <div className="ftShipImage"><img src={data.art} alt=""/><span>INI {unit.initiative} · ★ {unit.glory}</span></div>
+    <div className="ftShipText"><b>{data.name}</b> <small>{side}</small><div className="ftHealth">{unit.hp}/{unit.maxHp} HP · ★ {unit.glory} за выживание · {queued ? "ещё действует" : "ожидает"}</div>
       <div className="ftHealthBar"><i style={{width: 100 * unit.hp / unit.maxHp + "%"}}/></div>
       <div className="ftAbility">{data.ability}</div><div className="ftCost">{data.cost}</div>
     </div>
@@ -89,7 +89,7 @@ export default function FleetTestPage() {
 
     <div className="ftScore">
       <div><small>Раунд</small><strong>{game.round} / 3</strong></div>
-      {["A","B"].map(s => <div key={s}><small>{name(s)}</small><strong>{fleetHp(game.fleets[s])} HP</strong><span>Щиты {game.fleets[s].shield} · Кубы {game.fleets[s].dice.length}</span></div>)}
+      {["A","B"].map(s => <div key={s}><small>{name(s)}</small><strong>★ {victoryPoints(game.fleets[s])} очков</strong><span>{fleetHp(game.fleets[s])} HP · Потерь {fleetLosses(game.fleets[s])} · Щиты {game.fleets[s].shield} · Кубы {game.fleets[s].dice.length}</span></div>)}
       <div><small>Этап</small><strong>{game.phase === "draft" ? "Карты" : game.phase === "place" ? "Инициатива" : game.phase === "activate" ? "Активация" : game.phase === "react" ? "Защита" : "Конец боя"}</strong></div>
     </div>
 
@@ -125,7 +125,7 @@ export default function FleetTestPage() {
         {!!error && <p role="status" className="ftError">{error}</p>}
       </section>}
 
-      {game.phase === "activate" && <section className="ftPanel ftMainPanel"><div className="ftPanelHead"><div><small>ХОД ПО ИНИЦИАТИВЕ · ВОЛНА {turn?.wave}</small><h2>{UNIT_TYPES[turn.role].name} — {name(turn.side)}</h2></div><span className="ftCounter">INI {turn.initiative}</span></div>
+      {game.phase === "activate" && <section className="ftPanel ftMainPanel"><div className="ftPanelHead"><div><small>ХОД ПО ИНИЦИАТИВЕ · ВОЛНА {turn?.wave}</small><h2>{UNIT_TYPES[turn.role].name} — {name(turn.side)}</h2></div><span className="ftCounter">INI {turn.initiative} · ★ {game.fleets[turn.side].units.find(u=>u.id===turn.id)?.glory}</span></div>
         <div className="ftCommandNote">Приказ: <strong>{turn?.cardName}</strong> — одна активация. Особая способность корабля доступна один раз за раунд.</div>
         {ai ? <p className="ftNotice">Корабль противника выбирает действие…</p> : <>
           <p>Выбери кубы, затем действие корабля. Кубы списываются сразу. Для атаки нажми нужный корабль противника справа.</p>
@@ -146,9 +146,21 @@ export default function FleetTestPage() {
         </>}
       </section>}
 
-      {game.phase === "done" && <section className="ftPanel ftMainPanel"><small>БОЙ ЗАВЕРШЁН</small><h2>{game.winner==="draw"?"Ничья":"Победила "+name(game.winner)}</h2><p>Лига Ориона: {fleetHp(game.fleets.A)} HP. Гегемония: {fleetHp(game.fleets.B)} HP.</p><button className="ftPrimary" onClick={reset}>Сыграть ещё раз</button></section>}
+      {game.phase === "done" && <section className="ftPanel ftMainPanel">
+        <small>БОЙ ЗАВЕРШЁН · {game.result?.kind === "mutual-annihilation" ? "ВЗАИМНОЕ УНИЧТОЖЕНИЕ" :
+        game.result?.kind === "annihilation" ? "ПОЛНОЕ УНИЧТОЖЕНИЕ ФЛОТА" :
+        game.result?.kind === "draw" ? "РАВЕНСТВО ОЧКОВ" : "ПОБЕДА ПО ОЧКАМ ВЫЖИВШИХ"}</small>
+        <h2>{game.winner==="draw"?"Ничья":"Победила "+name(game.winner)}</h2>
+        <div className="ftOutcomeScores">{["A","B"].map(s=><div key={s}>
+          <strong>{name(s)}: ★ {victoryPoints(game.fleets[s])}</strong>
+          <span>{aliveUnits(game.fleets[s]).length} выжили · {fleetLosses(game.fleets[s])} уничтожены</span>
+          <small>Живые: {aliveUnits(game.fleets[s]).map(u=>UNIT_TYPES[u.role].name+" (★"+u.glory+")").join(", ")||"нет"}</small>
+        </div>)}</div>
+        <p className="ftFine">Очки дают только выжившие корабли. HP определяет повреждения и уничтожение, но не служит счётом победы.</p>
+        <button className="ftPrimary" onClick={reset}>Сыграть ещё раз</button>
+      </section>}
 
-      <section className="ftPanel"><h2>Очередь по инициативе</h2><div className="ftQueue">{nextQueue.length ? nextQueue.map((q,i)=><span className={"ftQueueChip"+(i===0?" ftQueueNow":"")} key={q.id+"-"+i}><b>{q.initiative}</b> {UNIT_TYPES[q.role].name} <small>{q.side} · {q.cardName}{q.wave===2?" · повтор":""}</small></span>) : <p>Формируется после выбора карт обоими игроками.</p>}</div></section>
+      <section className="ftPanel"><h2>Очередь по инициативе</h2><div className="ftQueue">{nextQueue.length ? nextQueue.map((q,i)=><span className={"ftQueueChip"+(i===0?" ftQueueNow":"")} key={q.id+"-"+i}><b>{q.initiative}</b> {UNIT_TYPES[q.role].name} <small>★ {UNIT_TYPES[q.role].glory} · {q.side} · {q.cardName}{q.wave===2?" · повтор":""}</small></span>) : <p>Формируется после выбора карт обоими игроками.</p>}</div></section>
       <section className="ftPanel"><h2>Введённые боевые карты</h2><div className="ftDeployed">{["A","B"].map(s=><div key={s}><h3>{name(s)} ({game.fleets[s].activeCards.length} командных карт)</h3><div className="ftCardMinis">{game.fleets[s].activeCards.map(c=><div key={c.id} className="ftCardMini"><b>{c.name}</b><small>{UNIT_TYPES[game.fleets[s].units.find(u => u.id === c.assignedShipId)?.role]?.name || "В резерве"}</small><span>{c.dice.map((d,i)=><DiceSymbol type={d} key={i}/>)}</span></div>)}</div></div>)}</div></section>
     </div>
 
