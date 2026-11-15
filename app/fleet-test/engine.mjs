@@ -9,8 +9,8 @@ export const CARD_TYPES = [
   { id: "combined", name: "Общий резерв", dice: ["attack", "defense"], hint: "Универсальный запас" },
 ];
 export const UNIT_TYPES = {
-  scout: { name: "Разведчик", initiative: 8, glory: 7, hp: 4, art: "/card-art/space/generated/swift_blade.png", ability: "Сенсорный импульс", cost: "✦2+ → повысить другой куб на 2 (макс. 3)", module: "Начало боя: +1 ✦" },
-  destroyer: { name: "Эсминец", initiative: 5, glory: 3, hp: 6, art: "/card-art/space/generated/huntress.png", ability: "Торпедная связка", cost: "⚔ + ✦, сумма 4+ → 4 урона", module: "Модуль: торпедные аппараты" },
+  scout: { name: "Разведчик", initiative: 8, glory: 6, hp: 4, art: "/card-art/space/generated/swift_blade.png", ability: "Сенсорный импульс", cost: "✦2+ → повысить другой куб на 2 (макс. 3)", module: "Начало боя: +1 ✦" },
+  destroyer: { name: "Эсминец", initiative: 5, glory: 4, hp: 6, art: "/card-art/space/generated/huntress.png", ability: "Торпедная связка", cost: "⚔ + ✦, сумма 4+ → 4 урона", module: "Модуль: торпедные аппараты" },
   cruiser: { name: "Крейсер", initiative: 3, glory: 1, hp: 8, art: "/card-art/space/generated/mercenary_captain.png", ability: "Бортовой залп", cost: "⚔ + ⚔, сумма 4+ → 5 урона", module: "Модуль: батарея тяжёлого огня" },
   interceptor: { name: "Перехватчик", initiative: 7, glory: 5, hp: 4, art: "/card-art/space/generated/raider.png", ability: "Ракетный заход", cost: "⚔2+ → урон равен значению куба", module: "Начало боя: +1 ⚔" },
   frigate: { name: "Фрегат", initiative: 4, glory: 4, hp: 6, art: "/card-art/space/generated/bodyguard.png", ability: "Плотный заслон", cost: "🛡2+ → значение куба +1 щита флоту", module: "Модуль: усиленный щит" },
@@ -50,10 +50,12 @@ export function createGame(seed = "battle-01", mode = "solo") {
   const g = { rng: hash(seed), seed, mode, round: 1, phase: "draft", drafting: "A", placing: "A", queue: [], index: 0, pending: null, winner: null, result: null, specialUsed: { A: [], B: [] }, nextDie: 0, log: [], fleets: {} };
   for (const side of ["A", "B"]) {
     const cards = CARD_TYPES.flatMap(t => [0, 1].map(copyNumber => ({ id: side + "-" + t.id + "-" + copyNumber, type: t.id, name: t.name, dice: [...t.dice], hint: t.hint })));
-    // Faction B emphasizes heavy assault; A has an extra technological option.
+    // Initial faction asymmetry is deliberately small:
+    // one League "combined" copy becomes ⚔✦ (mobility),
+    // Hegemony retains ⚔🛡 (security). Both still receive exactly two dice.
     const swap = cards.find(c => c.type === "combined" && c.id.endsWith("-1"));
-    if (side === "A") swap.dice = ["tech", "defense"];
-    else swap.dice = ["attack", "attack"];
+    if (side === "A") swap.dice = ["attack", "tech"];
+    else swap.dice = ["attack", "defense"];
     for (let i = cards.length - 1; i > 0; i--) {
       const j = Math.floor(roll(g) * (i + 1));
       [cards[i], cards[j]] = [cards[j], cards[i]];
