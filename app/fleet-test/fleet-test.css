@@ -103,3 +103,62 @@
 .ftOutcomeScores span{color:#e9e4eb;font-size:13px}
 .ftOutcomeScores small{color:#b9bed0;font-size:12px}
 @media(max-width:520px){.ftOutcomeScores{grid-template-columns:1fr}}
+
+/* Visual rules landing for /fleet-test #demo-rules */
+.ftBrief{background:linear-gradient(145deg,#251e36f5,#151b30f2);border:1px solid #c6a16c99;border-radius:16px;padding:18px 16px 20px;margin-bottom:16px;box-shadow:inset 0 0 22px #e3aa4910,0 14px 28px #0004}
+.ftBriefHead{max-width:720px;margin-bottom:16px}
+.ftBriefHead h2{margin:4px 0 8px}
+.ftLoop{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:8px 0 18px}
+.ftLoopBeat{display:flex;flex-direction:column;gap:8px;min-height:118px;padding:12px;border:1px solid #847a955f;border-radius:12px;background:#17243d;opacity:.38;filter:saturate(.65);animation:ftBeat 8s infinite}
+.ftLoopBeat>b{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#f3c881}
+.ftLoopCards{animation-delay:0s}
+.ftLoopDice{animation-delay:2s}
+.ftLoopInitiative{animation-delay:4s}
+.ftLoopClash{animation-delay:6s}
+.ftLoopCardRow,.ftLoopDiceRow,.ftLoopClashRow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ftLoopMini{display:inline-flex;align-items:center;justify-content:center;min-width:42px;min-height:36px;padding:4px 6px;border:1px solid #6f7991;border-radius:8px;background:#1b2941;font-size:13px}
+.ftLoopMiniOn{border-color:#f5c46a;animation:ftPop 8s infinite}
+.ftLoopDiceRow .ftSymbol{animation:ftPop 8s infinite 2s}
+.ftLoopClashFlash{display:inline-grid;place-items:center;min-width:32px;font-weight:800;color:#f4ddba;animation:ftClash 8s infinite}
+.ftDemoCards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:4px 0 16px}
+.ftDemoCard{display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;min-height:160px;padding:12px 8px;border:2px solid #6f7991;border-radius:13px;background:linear-gradient(150deg,#283852,#19223b)}
+.ftDemoCard strong{font-size:13px;color:#fff1e0}
+.ftDemoCard span{display:flex;gap:5px}
+.ftDemoCard small{font-size:11px;color:#b5bfd2;line-height:1.35}
+.ftDemoCard .ftWhy,.ftCardWhy{margin:0;font-size:11px;line-height:1.4;color:#e6d3b4;font-style:normal}
+.ftCardWhy{display:block;margin-top:4px}
+.ftRoot .ftCard{min-height:188px}
+.ftWhySteps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 14px;padding:0;list-style:none}
+.ftWhySteps li{display:flex;flex-direction:column;gap:4px;padding:12px;border:1px solid #847a955f;border-radius:12px;background:#1c2a41}
+.ftWhySteps b{color:#f4ce83;font-size:14px}
+.ftWhySteps span{color:#e9e4eb;font-size:13px;line-height:1.4}
+.ftWhySteps em{color:#b9bed0;font-size:12px;font-style:normal;line-height:1.4}
+@keyframes ftBeat{
+  0%,22%{opacity:1;filter:saturate(1);transform:translateY(-3px)}
+  28%,100%{opacity:.38;filter:saturate(.65);transform:none}
+}
+@keyframes ftPop{
+  0%,8%{transform:scale(.92)}
+  12%,22%{transform:scale(1.08);box-shadow:0 0 12px #f5c46a66}
+  28%,100%{transform:none;box-shadow:none}
+}
+@keyframes ftClash{
+  0%,74%{opacity:.35;transform:scale(.9)}
+  78%,92%{opacity:1;transform:scale(1.16) rotate(-8deg);color:#ff8e80}
+  100%{opacity:.35;transform:scale(.9)}
+}
+@media (prefers-reduced-motion:reduce){
+  .ftLoop,.ftLoopBeat,.ftLoopMiniOn,.ftLoopDiceRow .ftSymbol,.ftLoopClashFlash{animation:none!important;opacity:1!important;transform:none!important;filter:none!important;box-shadow:none!important}
+  .ftLoop{display:grid}
+}
+@media (max-width:1050px){
+  .ftLoop{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ftDemoCards{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .ftLoop,.ftDemoCards,.ftWhySteps{grid-template-columns:1fr}
+  .ftLoop{display:grid}
+}
+@media (max-width:420px){
+  .ftDemoCards{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

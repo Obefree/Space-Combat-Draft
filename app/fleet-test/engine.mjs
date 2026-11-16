@@ -2,20 +2,29 @@
 // This module has no DOM or framework dependencies, so it can be simulated directly.
 export const DIE_SYMBOL = { attack: "⚔", defense: "🛡", tech: "✦" };
 export const CARD_TYPES = [
-  { id: "assault", name: "Боевой натиск", dice: ["attack", "attack"], hint: "Два атакующих куба" },
-  { id: "guard", name: "Глухая оборона", dice: ["defense", "defense"], hint: "Два защитных куба" },
-  { id: "tracking", name: "Наведение", dice: ["attack", "tech"], hint: "Атака и технология" },
-  { id: "maneuver", name: "Тактический манёвр", dice: ["defense", "tech"], hint: "Защита и технология" },
-  { id: "combined", name: "Общий резерв", dice: ["attack", "defense"], hint: "Универсальный запас" },
+  { id: "assault", name: "Боевой натиск", dice: ["attack", "attack"], hint: "Два атакующих куба", why: "Чистое давление, когда цель открыта и щиты уже сняты." },
+  { id: "guard", name: "Глухая оборона", dice: ["defense", "defense"], hint: "Два защитных куба", why: "Щит и реакция: спасает хрупкий ★-корабль без траты активации." },
+  { id: "tracking", name: "Наведение", dice: ["attack", "tech"], hint: "Атака и технология", why: "Выстрел сейчас или калибровка куба под особую способность." },
+  { id: "maneuver", name: "Тактический манёвр", dice: ["defense", "tech"], hint: "Защита и технология", why: "Темп: щит сегодня или подготовка чужого залпа завтра." },
+  { id: "combined", name: "Общий резерв", dice: ["attack", "defense"], hint: "Универсальный запас", why: "Гибкость. У Лиги одна копия — ⚔✦, у Гегемонии обе остаются ⚔🛡." },
 ];
 export const UNIT_TYPES = {
-  scout: { name: "Разведчик", initiative: 8, glory: 6, hp: 4, art: "/card-art/space/generated/swift_blade.png", ability: "Сенсорный импульс", cost: "✦2+ → повысить другой куб на 2 (макс. 3)", module: "Начало боя: +1 ✦" },
-  destroyer: { name: "Эсминец", initiative: 5, glory: 4, hp: 6, art: "/card-art/space/generated/huntress.png", ability: "Торпедная связка", cost: "⚔ + ✦, сумма 4+ → 4 урона", module: "Модуль: торпедные аппараты" },
-  cruiser: { name: "Крейсер", initiative: 3, glory: 1, hp: 8, art: "/card-art/space/generated/mercenary_captain.png", ability: "Бортовой залп", cost: "⚔ + ⚔, сумма 4+ → 5 урона", module: "Модуль: батарея тяжёлого огня" },
-  interceptor: { name: "Перехватчик", initiative: 7, glory: 5, hp: 4, art: "/card-art/space/generated/raider.png", ability: "Ракетный заход", cost: "⚔2+ → урон равен значению куба", module: "Начало боя: +1 ⚔" },
-  frigate: { name: "Фрегат", initiative: 4, glory: 4, hp: 6, art: "/card-art/space/generated/bodyguard.png", ability: "Плотный заслон", cost: "🛡2+ → значение куба +1 щита флоту", module: "Модуль: усиленный щит" },
-  dreadnought: { name: "Дредноут", initiative: 2, glory: 2, hp: 8, art: "/card-art/space/generated/old_veteran.png", ability: "Осадный разряд", cost: "⚔ + ⚔ + ✦, сумма 6+ → 6 урона", module: "Модуль: осадный реактор" },
+  scout: { name: "Разведчик", initiative: 8, glory: 6, hp: 4, art: "/card-art/space/generated/swift_blade.png", ability: "Сенсорный импульс", cost: "✦2+ → повысить другой куб на 2 (макс. 3)", module: "Начало боя: +1 ✦", why: "Хрупкий, но ★6." },
+  destroyer: { name: "Эсминец", initiative: 5, glory: 4, hp: 6, art: "/card-art/space/generated/huntress.png", ability: "Торпедная связка", cost: "⚔ + ✦, сумма 4+ → 4 урона", module: "Модуль: торпедные аппараты", why: "Средний ★4." },
+  cruiser: { name: "Крейсер", initiative: 3, glory: 1, hp: 8, art: "/card-art/space/generated/mercenary_captain.png", ability: "Бортовой залп", cost: "⚔ + ⚔, сумма 4+ → 5 урона", module: "Модуль: батарея тяжёлого огня", why: "Танк ★1." },
+  interceptor: { name: "Перехватчик", initiative: 7, glory: 5, hp: 4, art: "/card-art/space/generated/raider.png", ability: "Ракетный заход", cost: "⚔2+ → урон равен значению куба", module: "Начало боя: +1 ⚔", why: "Быстрый ★5." },
+  frigate: { name: "Фрегат", initiative: 4, glory: 4, hp: 6, art: "/card-art/space/generated/bodyguard.png", ability: "Плотный заслон", cost: "🛡2+ → значение куба +1 щита флоту", module: "Модуль: усиленный щит", why: "Щит ★4." },
+  dreadnought: { name: "Дредноут", initiative: 2, glory: 2, hp: 8, art: "/card-art/space/generated/old_veteran.png", ability: "Осадный разряд", cost: "⚔ + ⚔ + ✦, сумма 6+ → 6 урона", module: "Модуль: осадный реактор", why: "Кувалда ★2." },
 };
+export const DEMO_FLOW = [
+  { n: 1, title: "Флоты уже выбраны", what: "Лига: разведчик, эсминец, крейсер. Гегемония: перехватчик, фрегат, дредноут. Составы заданы сценарием, не драфтом.", why: "Это тактический слой 4X: в бой входят уже выбранные корабли." },
+  { n: 2, title: "Выбери 3 карты из 5", what: "Колода — 10 карт (5 пар), в руке 5. На старте вводишь 3; ещё по одной в раундах 2 и 3.", why: "Выбор сразу задаёт и кубы, и будущие приказы." },
+  { n: 3, title: "Карта становится приказом", what: "Каждая введённая карта даёт 2 куба и встаёт в ряд инициативы как одна команда кораблю.", why: "Карта — не одноразовая вспышка, а слот хода на весь бой." },
+  { n: 4, title: "Ход по инициативе", what: "Корабль с большей инициативой ходит раньше. Не больше двух активаций на корабль в раунд, особая способность — один раз.", why: "Быстрые хрупкие корабли бьют первыми, но их ★ дороже терять." },
+  { n: 5, title: "Трать кубы или пропусти", what: "В активацию можно атаковать, поднять щит, калибровать, использовать способность корабля или пропустить ход.", why: "Пропуск сохраняет кубы; потраченные исчезают из общего пула флота." },
+  { n: 6, title: "Щит глотает удар", what: "Щиты поглощают урон. 🛡 можно потратить как реакцию без активации. Неистраченные щиты сгорают в конце раунда.", why: "Реакция спасает ★-корабль, не тратя его ход." },
+  { n: 7, title: "Победа по ★ живых", what: "Три раунда или уничтожение флота. Побеждает сумма ★ выживших кораблей; оставшийся HP не счёт.", why: "Хрупкий разведчик ★6 ценнее танка-крейсера ★1." },
+];
 const ORDER = { A: ["scout", "destroyer", "cruiser"], B: ["interceptor", "frigate", "dreadnought"] };
 // Each existing ship contributes one starting die; scout/interceptor modules contribute a bonus die.
 const SHIP_START_DICE = { scout: "tech", destroyer: "attack", cruiser: "attack", interceptor: "attack", frigate: "defense", dreadnought: "attack" };
@@ -49,7 +58,7 @@ export function aliveUnits(f) { return f.units.filter(u => u.hp > 0); }
 export function createGame(seed = "battle-01", mode = "solo") {
   const g = { rng: hash(seed), seed, mode, round: 1, phase: "draft", drafting: "A", placing: "A", queue: [], index: 0, pending: null, winner: null, result: null, specialUsed: { A: [], B: [] }, nextDie: 0, log: [], fleets: {} };
   for (const side of ["A", "B"]) {
-    const cards = CARD_TYPES.flatMap(t => [0, 1].map(copyNumber => ({ id: side + "-" + t.id + "-" + copyNumber, type: t.id, name: t.name, dice: [...t.dice], hint: t.hint })));
+    const cards = CARD_TYPES.flatMap(t => [0, 1].map(copyNumber => ({ id: side + "-" + t.id + "-" + copyNumber, type: t.id, name: t.name, dice: [...t.dice], hint: t.hint, why: t.why })));
     // Initial faction asymmetry is deliberately small:
     // one League "combined" copy becomes ⚔✦ (mobility),
     // Hegemony retains ⚔🛡 (security). Both still receive exactly two dice.
@@ -57,9 +66,11 @@ export function createGame(seed = "battle-01", mode = "solo") {
     if (side === "A") {
       swap.dice = ["attack", "tech"];
       swap.hint = "Огонь и технологическая гибкость";
+      swap.why = "Лига: одна копия резерва даёт выстрел и калибровку вместо щита.";
     } else {
       swap.dice = ["attack", "defense"];
       swap.hint = "Атака и щит";
+      swap.why = "Гегемония держит обе копии универсальными: удар или реакция.";
     }
     for (let i = cards.length - 1; i > 0; i--) {
       const j = Math.floor(roll(g) * (i + 1));

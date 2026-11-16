@@ -1,6 +1,6 @@
 # Fleet Initiative Playtest — v0.3
 **Repo:** Obefree/Space-Combat-Draft
-**Route:** /fleet-test (separate from the existing / page)
+**Route:** /fleet-test (separate from the existing / page). `/fleet-test` opens with visual rules landing `#demo-rules`.
 **Status:** functional prototype in branch feature/fleet-initiative-playtest; not a confirmed live deployment to spacecombat.obefree.com.
 
 ## Purpose

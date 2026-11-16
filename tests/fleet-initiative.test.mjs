@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { runBalance } from "../scripts/fleet-balance.mjs";
 import {
-  CARD_TYPES, createGame, chooseCards, suggestedAssignments, placeCards, turnOf,
+  CARD_TYPES, DEMO_FLOW, createGame, chooseCards, suggestedAssignments, placeCards, turnOf,
   tryAction, resolveReaction, aiDraftChoice, aiActionChoice, aiReactionChoice, fleetHp, victoryPoints, fleetLosses
 } from "../app/fleet-test/engine.mjs";
 
@@ -22,6 +23,20 @@ function draftAndPlace(g) {
   assert.equal(g.phase, "activate");
   return g;
 }
+
+test("visual rules landing: card why-text, 7-step DEMO_FLOW, and play CTA", () => {
+  assert.ok(CARD_TYPES.every(c => typeof c.why === "string" && c.why.length > 0));
+  assert.equal(DEMO_FLOW.length, 7);
+  DEMO_FLOW.forEach((step, i) => {
+    assert.equal(step.n, i + 1);
+    assert.ok(step.title && step.what && step.why);
+  });
+  const g = createGame("why-copy");
+  assert.ok([...g.fleets.A.hand, ...g.fleets.B.hand].every(c => typeof c.why === "string" && c.why.length > 0));
+  const page = readFileSync(new URL("../app/fleet-test/page.jsx", import.meta.url), "utf8");
+  assert.ok(page.includes("demo-rules"));
+  assert.ok(page.includes("Играть демо-бой"));
+});
 
 test("10-card factions: 5 pairs, 5 in hand; ships exist before card draw", () => {
   assert.equal(CARD_TYPES.length, 5);

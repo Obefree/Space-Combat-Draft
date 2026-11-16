@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { DIE_SYMBOL, UNIT_TYPES, aiActionChoice, aiDraftChoice, aiReactionChoice, aliveUnits, chooseCards, createGame, fleetHp, fleetLosses, victoryPoints, other, placeCards, suggestedAssignments, resolveReaction, tryAction, turnOf } from "./engine.mjs";
+import { CARD_TYPES, DEMO_FLOW, DIE_SYMBOL, UNIT_TYPES, aiActionChoice, aiDraftChoice, aiReactionChoice, aliveUnits, chooseCards, createGame, fleetHp, fleetLosses, victoryPoints, other, placeCards, suggestedAssignments, resolveReaction, tryAction, turnOf } from "./engine.mjs";
 import "./fleet-test.css";
 
 function DiceSymbol({ type, value }) { return <span className={"ftSymbol ft-" + type}>{DIE_SYMBOL[type]}{value || ""}</span>; }
@@ -17,6 +17,60 @@ function Ship({ unit, side, current, target, queued, onClick, canTarget }) {
 }
 function name(side) { return side === "A" ? "Лига Ориона" : "Гегемония"; }
 
+function RulesBrief({ onPlay }) {
+  return <section id="demo-rules" className="ftBrief">
+    <div className="ftBriefHead">
+      <p className="ftOverline">КАК ИГРАТЬ ДЕМО-БОЙ</p>
+      <h2>Семь шагов, потом бой</h2>
+      <p>Флоты уже стоят на поле. Карты дают кубы и становятся приказами. Победа — по ★ живых кораблей.</p>
+    </div>
+    <div className="ftLoop" aria-hidden="true">
+      <div className="ftLoopBeat ftLoopCards">
+        <b>Карты</b>
+        <div className="ftLoopCardRow">{CARD_TYPES.map((c, i) =>
+          <span key={c.id} className={"ftLoopMini" + (i < 3 ? " ftLoopMiniOn" : "")}>{c.dice.map(d => DIE_SYMBOL[d]).join("")}</span>)}
+        </div>
+      </div>
+      <div className="ftLoopBeat ftLoopDice">
+        <b>Кубы</b>
+        <div className="ftLoopDiceRow">
+          <span className="ftSymbol ft-attack">⚔2</span>
+          <span className="ftSymbol ft-defense">🛡3</span>
+          <span className="ftSymbol ft-tech">✦1</span>
+        </div>
+      </div>
+      <div className="ftLoopBeat ftLoopInitiative">
+        <b>Инициатива</b>
+        <div className="ftQueue">
+          <span className="ftQueueChip ftQueueNow"><b>8</b> Разведчик</span>
+          <span className="ftQueueChip"><b>7</b> Перехватчик</span>
+          <span className="ftQueueChip"><b>5</b> Эсминец</span>
+        </div>
+      </div>
+      <div className="ftLoopBeat ftLoopClash">
+        <b>Удар</b>
+        <div className="ftLoopClashRow">
+          <span className="ftSymbol ft-attack">⚔</span>
+          <span className="ftLoopClashFlash">vs</span>
+          <span className="ftSymbol ft-defense">🛡</span>
+        </div>
+      </div>
+    </div>
+    <div className="ftDemoCards">{CARD_TYPES.map(c =>
+      <article key={c.id} className="ftDemoCard">
+        <strong>{c.name}</strong>
+        <span>{c.dice.map((d, i) => <DiceSymbol key={i} type={d}/>)}</span>
+        <small>{c.hint}</small>
+        <p className="ftWhy">{c.why}</p>
+      </article>)}
+    </div>
+    <ol className="ftWhySteps">{DEMO_FLOW.map(step =>
+      <li key={step.n}><b>{step.n}. {step.title}</b><span>{step.what}</span><em>{step.why}</em></li>)}
+    </ol>
+    <div className="ftActions"><button className="ftPrimary" onClick={onPlay}>Играть демо-бой</button></div>
+  </section>;
+}
+
 export default function FleetTestPage() {
   const [seed, setSeed] = useState("battle-01");
   const [mode, setMode] = useState("solo");
@@ -26,6 +80,7 @@ export default function FleetTestPage() {
   const [placements, setPlacements] = useState({});
   const [target, setTarget] = useState("");
   const [error, setError] = useState("");
+  const [showBrief, setShowBrief] = useState(true);
   const turn = turnOf(game);
   const activeSide = game.phase === "draft" ? game.drafting : game.phase === "place" ? game.placing : game.phase === "react" ? game.pending?.defender : turn?.side;
   const ai = game.mode === "solo" && activeSide === "B";
@@ -38,6 +93,19 @@ export default function FleetTestPage() {
     card, unit: game.fleets[game.placing].units.find(u => u.id === proposed[card.id])
   })).sort((a,b) => (b.unit?.initiative || 0) - (a.unit?.initiative || 0)) : [];
   const nextQueue = useMemo(() => game.queue.slice(game.index, game.index + 12).filter(q => game.fleets[q.side].units.some(u => u.id === q.id && u.hp > 0)), [game]);
+
+  useEffect(() => {
+    try {
+      const dismissed = localStorage.getItem("space-fleet-brief-dismissed") === "1";
+      const wantRules = window.location.hash.includes("rules");
+      if (dismissed && !wantRules) setShowBrief(false);
+    } catch { /* localStorage may be blocked */ }
+  }, []);
+
+  function playDemo() {
+    try { localStorage.setItem("space-fleet-brief-dismissed", "1"); } catch { /* ignore */ }
+    setShowBrief(false);
+  }
 
   useEffect(() => {
     if (game.mode !== "solo") return;
@@ -84,10 +152,14 @@ export default function FleetTestPage() {
       <div className="ftIntro"><a href="/" className="ftBack">← Старый космический драфт</a><div className="ftOverline">SPACE COMBAT DRAFT · НОВАЯ СЦЕНА</div>
         <h1>Инициативный бой флотов</h1><p>Карты становятся приказами в ряду инициативы. Корабли расходуют кубы или сохраняют их.</p></div>
       <div className="ftSettings"><label>Режим<select value={mode} onChange={e => setMode(e.target.value)}><option value="solo">Против компьютера</option><option value="hotseat">Два игрока рядом</option></select></label>
-        <label>Seed<input value={seed} onChange={e => setSeed(e.target.value)}/></label><button className="ftPrimary" onClick={reset}>Новый бой</button></div>
+        <label>Seed<input value={seed} onChange={e => setSeed(e.target.value)}/></label>
+        <button type="button" onClick={() => setShowBrief(true)}>Правила</button>
+        <button className="ftPrimary" onClick={reset}>Новый бой</button></div>
     </header>
 
-    <div className="ftScore">
+    {showBrief && <RulesBrief onPlay={playDemo}/>}
+
+    {!showBrief && <><div className="ftScore">
       <div><small>Раунд</small><strong>{game.round} / 3</strong></div>
       {["A","B"].map(s => <div key={s}><small>{name(s)}</small><strong>★ {victoryPoints(game.fleets[s])} очков</strong><span>{fleetHp(game.fleets[s])} HP · Потерь {fleetLosses(game.fleets[s])} · Щиты {game.fleets[s].shield} · Кубы {game.fleets[s].dice.length}</span></div>)}
       <div><small>Этап</small><strong>{game.phase === "draft" ? "Карты" : game.phase === "place" ? "Инициатива" : game.phase === "activate" ? "Активация" : game.phase === "react" ? "Защита" : "Конец боя"}</strong></div>
@@ -98,7 +170,7 @@ export default function FleetTestPage() {
         {ai ? <p className="ftNotice">Компьютер подбирает карты…</p> : <>
           <p>{game.round === 1 ? "Выбери три из пяти карт. Их кубы бросаются в общий резерв флота. Оставшиеся две карты пригодятся в следующих раундах." : "Выбери карту, чтобы добавить новые кубы. Старые кубы и их значения остаются."}</p>
           <div className="ftCards">{myFleet.hand.map(c => <button key={c.id} onClick={() => pickCard(c.id)} aria-pressed={picked.includes(c.id)} className={"ftCard" + (picked.includes(c.id) ? " ftCardPicked" : "")}>
-            <strong>{c.name}</strong><span>{c.dice.map((d,i)=><DiceSymbol key={i} type={d}/>)}</span><small>{c.hint}</small></button>)}</div>
+            <strong>{c.name}</strong><span>{c.dice.map((d,i)=><DiceSymbol key={i} type={d}/>)}</span><small>{c.hint}</small>{c.why ? <em className="ftCardWhy">{c.why}</em> : null}</button>)}</div>
           <div className="ftActions"><button disabled={picked.length !== selectedCardsNeed} className="ftPrimary" onClick={confirm}>Получить кубы и продолжить</button><span className="ftFine">Каждая введённая карта даёт 2 куба и 1 активацию за раунд.</span></div>
         </>}
       </section>}
@@ -171,6 +243,7 @@ export default function FleetTestPage() {
       {game.phase==="activate"&&!ai&&turn?.side!==s&&<p className="ftFine">Нажми на корабль, чтобы назначить его целью.</p>}</section>)}
       <section className="ftPanel"><h2>Журнал боя</h2><ol className="ftLog">{game.log.slice(0,12).map((l,i)=><li key={i}>{l}</li>)}</ol></section>
     </aside></div>
+    </>}
     <footer className="ftFooter">Это отдельная тестовая сцена в существующем Space Combat Draft. Составы флотов пока заданы сценарием; старая игра остаётся на главной странице.</footer>
   </main>;
 }
