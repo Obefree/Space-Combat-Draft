@@ -607,6 +607,71 @@ function clonePlayers(players: Record<PlayerId, Player>): Record<PlayerId, Playe
   };
 }
 
+function cardDieTypeCounts(card: CardData) {
+  return card.dice.reduce(
+    (acc, dieType) => ({ ...acc, [dieType]: acc[dieType] + 1 }),
+    { attack: 0, defense: 0, magic: 0 } as Record<DieType, number>,
+  );
+}
+
+function dieTypeCounts(dice: Die[]) {
+  return dice.reduce(
+    (acc, die) => ({ ...acc, [die.type]: acc[die.type] + 1 }),
+    { attack: 0, defense: 0, magic: 0 } as Record<DieType, number>,
+  );
+}
+
+function chooseChargeDice(pool: Die[], creature: Creature) {
+  const printed = cardDieTypeCounts(creature.card);
+  const stored = dieTypeCounts(creature.attached);
+  const selected: Die[] = [];
+  const selectedIds = new Set<string>();
+
+  for (const type of ["attack", "defense", "magic"] as DieType[]) {
+    const need = Math.max(0, printed[type] - stored[type]);
+    const candidates = pool
+      .filter((die) => die.type === type && !selectedIds.has(die.id))
+      .sort((left, right) => {
+        if (right.value !== left.value) return right.value - left.value;
+        return left.id.localeCompare(right.id);
+      })
+      .slice(0, need);
+    for (const die of candidates) {
+      selected.push(die);
+      selectedIds.add(die.id);
+    }
+  }
+
+  return selected;
+}
+
+function chargeActiveCreature(state: GameState): GameState {
+  if (!state.battle?.activeCreatureId) return state;
+  const actor = getCreature(state.players, state.battle.activeCreatureId);
+  if (!actor || !actor.alive) return state;
+
+  const pools = clonePools(state.battle.pools);
+  const charge = chooseChargeDice(pools[actor.owner], actor);
+  if (!charge.length) return state;
+
+  const chargeIds = new Set(charge.map((die) => die.id));
+  removePoolDice(pools, actor.owner, chargeIds);
+  const players = addDiceToCreature(state.players, actor.id, charge);
+
+  return {
+    ...state,
+    players,
+    battle: {
+      ...state.battle,
+      pools,
+      log: [
+        `${actor.card.name_ru} заряжается ${formatDiceList(charge)} из резерва ${PLAYERS[actor.owner].short}.`,
+        ...state.battle.log,
+      ].slice(0, 24),
+    },
+  };
+}
+
 function addDiceToCreature(
   players: Record<PlayerId, Player>,
   creatureId: string,
