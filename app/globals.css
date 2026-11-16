@@ -3267,3 +3267,56 @@ input:focus-visible,
     grid-template-columns: 1fr;
   }
 }
+
+/* Minimal mode selector: old battle remains untouched, demo is an optional route. */
+.battleModeSwitcher {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: fit-content;
+  max-width: calc(100% - 20px);
+  margin: 14px auto 2px;
+  padding: 7px;
+  border: 1px solid rgba(247,199,111,.42);
+  border-radius: 18px;
+  background: rgba(21,18,29,.94);
+  box-shadow: 0 10px 32px rgba(0,0,0,.28);
+}
+.battleModeSwitchActive,
+.battleModeSwitchLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 16px;
+  min-height: 42px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 750;
+  text-align: center;
+  text-decoration: none;
+}
+.battleModeSwitchActive {
+  background: rgba(255,255,255,.12);
+  color: #fff8ec;
+}
+.battleModeSwitchLink {
+  background: #f7c76f;
+  color: #21170b;
+}
+.battleModeSwitchLink:hover,
+.battleModeSwitchLink:focus-visible {
+  background: #ffe3a8;
+  outline: 2px solid #fff8ec;
+  outline-offset: 2px;
+}
+@media (max-width: 460px) {
+  .battleModeSwitcher {width: calc(100% - 20px); }
+  .battleModeSwitchActive, .battleModeSwitchLink {
+    flex: 1 1 135px;
+    padding: 9px 10px;
+    font-size: 13px;
+  }
+}
