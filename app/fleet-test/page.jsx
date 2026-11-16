@@ -5,15 +5,72 @@ import "./fleet-test.css";
 
 function DiceSymbol({ type, value }) { return <span className={"ftSymbol ft-" + type}>{DIE_SYMBOL[type]}{value || ""}</span>; }
 function Die({ die, picked, disabled, onClick }) { return <button disabled={disabled} onClick={onClick} aria-pressed={picked} className={"ftDie ft-" + die.type + (picked ? " ftPicked" : "")}><DiceSymbol type={die.type} value={die.value}/></button>; }
-function Ship({ unit, side, current, target, queued, onClick, canTarget }) {
+function Ship({ unit, side, current, target, queued, commands, specialSpent, onClick, canTarget }) {
   const data = UNIT_TYPES[unit.role];
-  return <button disabled={!canTarget || unit.hp <= 0} onClick={onClick} className={"ftShip" + (unit.hp <= 0 ? " ftDead" : "") + (current ? " ftCurrent" : "") + (target ? " ftTarget" : "")}>
-    <div className="ftShipImage"><img src={data.art} alt=""/><span>INI {unit.initiative} · ★ {unit.glory}</span></div>
-    <div className="ftShipText"><b>{data.name}</b> <small>{side}</small><div className="ftHealth">{unit.hp}/{unit.maxHp} HP · ★ {unit.glory} за выживание · {queued ? "ещё действует" : "ожидает"}</div>
-      <div className="ftHealthBar"><i style={{width: 100 * unit.hp / unit.maxHp + "%"}}/></div>
-      <div className="ftAbility">{data.ability}</div><div className="ftCost">{data.cost}</div>
+  const [payment, effect] = data.cost.split("→").map(text => text.trim());
+  return <button type="button" disabled={!canTarget || unit.hp <= 0} onClick={onClick}
+    aria-label={data.name + ", инициатива " + unit.initiative + ", способность " + data.ability + ", " + data.cost}
+    className={"ftShip" + (unit.hp <= 0 ? " ftDead" : "") + (current ? " ftCurrent" : "") + (target ? " ftTarget" : "")}>
+    <div className="ftShipImage"><img src={data.art} alt="" loading="lazy"/><span>⚡ {unit.initiative} · ★ {unit.glory}</span></div>
+    <div className="ftShipText">
+      <div className="ftShipTitle"><b>{data.name}</b><small>{side === "A" ? "Лига" : "Гегемония"}</small></div>
+      <div className="ftHealth">{unit.hp}/{unit.maxHp} HP · ★ {unit.glory} за выживание</div>
+      <div className="ftHealthBar"><i style={{width:100*unit.hp/unit.maxHp+"%"}}/></div>
+      <div className="ftShipOrders">{commands ? "Приказов: " + commands : "Приказов пока нет"}{queued ? " · впереди ход" : ""}</div>
+      <div className="ftShipSpecial">
+        <div className="ftShipSpecialHead"><span>ОСОБАЯ СПОСОБНОСТЬ</span><em>{specialSpent ? "Уже применена" : "1 раз за раунд"}</em></div>
+        <strong>{data.ability}</strong>
+        <div className="ftShipPayment">{payment}</div>
+        <div className="ftShipEffect">{effect || data.cost}</div>
+      </div>
+      <div className="ftShipModule">{data.module}</div>
     </div>
   </button>;
+}
+function InitiativeBattlefield({ game, turn, targetId, canChooseTarget, onTarget }) {
+  // The original game places League above the initiative axis and Hegemony below it.
+  // The DOM is ordered highest initiative first; RTL layout starts with that ship on the RIGHT.
+  const lineup = ["A","B"].flatMap(side =>
+    game.fleets[side].units.map(unit => ({ side, unit })))
+    .sort((a,b) => b.unit.initiative - a.unit.initiative ||
+      b.unit.glory - a.unit.glory || a.unit.id.localeCompare(b.unit.id));
+  const renderShip = ({side,unit}) => {
+    const commandCount = game.fleets[side].activeCards.filter(c => c.assignedShipId === unit.id).length;
+    return <Ship unit={unit} side={side} current={turn?.id === unit.id}
+      target={targetId === unit.id && turn?.side !== side}
+      queued={game.queue.slice(game.index).some(q => q.id === unit.id)}
+      commands={commandCount} specialSpent={game.specialUsed[side].includes(unit.id)}
+      canTarget={canChooseTarget && turn?.side !== side}
+      onClick={() => onTarget(unit.id)}/>;
+  };
+  return <section className="ftPanel ftBattlefield" aria-label="Поле боя: очередь справа налево">
+    <div className="ftPanelHead">
+      <div><small>БОЕВОЕ ПОЛЕ · КАК В КЛАССИЧЕСКОМ РЕЖИМЕ</small>
+        <h2>Линия инициативы — справа налево</h2></div>
+      <span className="ftCounter">⚡ 8 → 7 → 5 → 4 → 3 → 2</span>
+    </div>
+    <div className="ftBattlefieldMeta"><span>Лига Ориона · сверху</span>
+      <strong>Высокая инициатива справа → ход к левому краю</strong>
+      <span>Гегемония · снизу</span></div>
+    <div className="ftBattlefieldScroller" dir="rtl" role="region" tabIndex={0}
+      aria-label="Горизонтальное поле боя. Прокрутите для просмотра кораблей. Высокая инициатива справа.">
+      <div className="ftBattlefieldLine">
+        {lineup.map(entry => <div className="ftBattlefieldColumn" key={entry.unit.id}>
+          <div className={"ftBattlefieldSlot ftBattlefieldTop" + (entry.side==="A"?" ftFilled":"")}>
+            {entry.side === "A" ? renderShip(entry) : null}
+          </div>
+          <div className={"ftBattlefieldAxis" + (turn?.id === entry.unit.id ? " ftAxisActive" : "")}>
+            <span>⚡ {entry.unit.initiative}</span>
+            <strong>{turn?.id === entry.unit.id ? "СЕЙЧАС ХОД" : "ИНИЦИАТИВА"}</strong>
+          </div>
+          <div className={"ftBattlefieldSlot ftBattlefieldBottom" + (entry.side==="B"?" ftFilled":"")}>
+            {entry.side === "B" ? renderShip(entry) : null}
+          </div>
+        </div>)}
+      </div>
+    </div>
+    {canChooseTarget && <p className="ftBattlefieldHint">Выбери корабль противника прямо на линии инициативы. Выделенная красным карточка — текущая цель.</p>}
+  </section>;
 }
 function name(side) { return side === "A" ? "Лига Ориона" : "Гегемония"; }
 
@@ -165,6 +222,10 @@ export default function FleetTestPage() {
       <div><small>Этап</small><strong>{game.phase === "draft" ? "Карты" : game.phase === "place" ? "Инициатива" : game.phase === "activate" ? "Активация" : game.phase === "react" ? "Защита" : "Конец боя"}</strong></div>
     </div>
 
+    <InitiativeBattlefield game={game} turn={turn} targetId={actualTarget}
+      canChooseTarget={game.phase==="activate" && !ai}
+      onTarget={setTarget}/>
+
     <div className="ftColumns"><div className="ftGameplay">
       {game.phase === "draft" && <section className="ftPanel ftMainPanel"><div className="ftPanelHead"><div><small>ПОДГОТОВКА К РАУНДУ {game.round}</small><h2>{name(game.drafting)} — {game.round === 1 ? "три стартовые карты" : "одна дополнительная карта"}</h2></div><span className="ftCounter">{picked.length}/{selectedCardsNeed}</span></div>
         {ai ? <p className="ftNotice">Компьютер подбирает карты…</p> : <>
@@ -189,7 +250,7 @@ export default function FleetTestPage() {
             </select>
           </label>)}</div>
           <div className="ftTimeline"><h3>Предварительный ряд инициативы</h3>
-            <div className="ftQueue">{rowPreview.map(({card,unit}) => <span className="ftQueueChip" key={card.id}>
+            <div className="ftQueue ftQueueRtl" dir="rtl">{rowPreview.map(({card,unit}) => <span className="ftQueueChip" key={card.id}>
               <b>{unit?.initiative || "—"}</b> {unit ? UNIT_TYPES[unit.role].name : "Резерв"} <small>{card.name}</small>
             </span>)}</div></div>
           <div className="ftActions"><button className="ftPrimary" onClick={commitPlacement}>Разместить приказы и начать раунд</button></div>
@@ -200,7 +261,7 @@ export default function FleetTestPage() {
       {game.phase === "activate" && <section className="ftPanel ftMainPanel"><div className="ftPanelHead"><div><small>ХОД ПО ИНИЦИАТИВЕ · ВОЛНА {turn?.wave}</small><h2>{UNIT_TYPES[turn.role].name} — {name(turn.side)}</h2></div><span className="ftCounter">INI {turn.initiative} · ★ {game.fleets[turn.side].units.find(u=>u.id===turn.id)?.glory}</span></div>
         <div className="ftCommandNote">Приказ: <strong>{turn?.cardName}</strong> — одна активация. Особая способность корабля доступна один раз за раунд.</div>
         {ai ? <p className="ftNotice">Корабль противника выбирает действие…</p> : <>
-          <p>Выбери кубы, затем действие корабля. Кубы списываются сразу. Для атаки нажми нужный корабль противника справа.</p>
+          <p>Выбери кубы, затем действие корабля. Кубы списываются сразу. Для атаки выбери корабль противника на линии инициативы выше.</p>
           <h3>Ваш резерв <small>({myFleet.dice.length} кубов, выбрано {selected.length})</small></h3>
           <div className="ftDice">{myFleet.dice.map(d => <Die key={d.id} die={d} picked={selected.includes(d.id)} onClick={() => pickDie(d.id)}/>)}</div>
           <div className="ftSpecial"><b>{UNIT_TYPES[turn.role].ability}</b><span>{UNIT_TYPES[turn.role].cost}</span></div>
@@ -232,16 +293,14 @@ export default function FleetTestPage() {
         <button className="ftPrimary" onClick={reset}>Сыграть ещё раз</button>
       </section>}
 
-      <section className="ftPanel"><h2>Очередь по инициативе</h2><div className="ftQueue">{nextQueue.length ? nextQueue.map((q,i)=><span className={"ftQueueChip"+(i===0?" ftQueueNow":"")} key={q.id+"-"+i}><b>{q.initiative}</b> {UNIT_TYPES[q.role].name} <small>★ {UNIT_TYPES[q.role].glory} · {q.side} · {q.cardName}{q.wave===2?" · повтор":""}</small></span>) : <p>Формируется после выбора карт обоими игроками.</p>}</div></section>
+      <section className="ftPanel"><h2>Очередь по инициативе</h2><div className="ftQueue ftQueueRtl" dir="rtl">{nextQueue.length ? nextQueue.map((q,i)=><span className={"ftQueueChip"+(i===0?" ftQueueNow":"")} key={q.id+"-"+i}><b>{q.initiative}</b> {UNIT_TYPES[q.role].name} <small>★ {UNIT_TYPES[q.role].glory} · {q.side} · {q.cardName}{q.wave===2?" · повтор":""}</small></span>) : <p>Формируется после выбора карт обоими игроками.</p>}</div></section>
       <section className="ftPanel"><h2>Введённые боевые карты</h2><div className="ftDeployed">{["A","B"].map(s=><div key={s}><h3>{name(s)} ({game.fleets[s].activeCards.length} командных карт)</h3><div className="ftCardMinis">{game.fleets[s].activeCards.map(c=><div key={c.id} className="ftCardMini"><b>{c.name}</b><small>{UNIT_TYPES[game.fleets[s].units.find(u => u.id === c.assignedShipId)?.role]?.name || "В резерве"}</small><span>{c.dice.map((d,i)=><DiceSymbol type={d} key={i}/>)}</span></div>)}</div></div>)}</div></section>
     </div>
 
-    <aside className="ftSidebar">{["A","B"].map(s=><section className={"ftPanel ftFleet ftFleet"+s} key={s}><div className="ftPanelHead"><h2>{name(s)}</h2><span className="ftCounter">{aliveUnits(game.fleets[s]).length}/3</span></div>
-      <div className="ftShips">{game.fleets[s].units.map(u=><Ship key={u.id} unit={u} side={s} current={turn?.id===u.id} targeted={actualTarget===u.id&&turn?.side!==s}
-        queued={game.queue.slice(game.index).some(q=>q.id===u.id)}
-        canTarget={game.phase==="activate"&&!ai&&turn?.side!==s} onClick={()=>setTarget(u.id)}/>)}</div>
-      {game.phase==="activate"&&!ai&&turn?.side!==s&&<p className="ftFine">Нажми на корабль, чтобы назначить его целью.</p>}</section>)}
-      <section className="ftPanel"><h2>Журнал боя</h2><ol className="ftLog">{game.log.slice(0,12).map((l,i)=><li key={i}>{l}</li>)}</ol></section>
+    <aside className="ftSidebar">
+      <section className="ftPanel"><h2>Журнал боя</h2>
+        <ol className="ftLog">{game.log.slice(0,12).map((l,i)=><li key={i}>{l}</li>)}</ol>
+      </section>
     </aside></div>
     </>}
     <footer className="ftFooter">Это отдельная тестовая сцена в существующем Space Combat Draft. Составы флотов пока заданы сценарием; старая игра остаётся на главной странице.</footer>
