@@ -137,7 +137,7 @@ export default function FleetTestPage() {
   const [placements, setPlacements] = useState({});
   const [target, setTarget] = useState("");
   const [error, setError] = useState("");
-  const [showBrief, setShowBrief] = useState(true);
+  const [showBrief, setShowBrief] = useState(false);
   const turn = turnOf(game);
   const activeSide = game.phase === "draft" ? game.drafting : game.phase === "place" ? game.placing : game.phase === "react" ? game.pending?.defender : turn?.side;
   const ai = game.mode === "solo" && activeSide === "B";
@@ -152,15 +152,10 @@ export default function FleetTestPage() {
   const nextQueue = useMemo(() => game.queue.slice(game.index, game.index + 12).filter(q => game.fleets[q.side].units.some(u => u.id === q.id && u.hp > 0)), [game]);
 
   useEffect(() => {
-    try {
-      const dismissed = localStorage.getItem("space-fleet-brief-dismissed") === "1";
-      const wantRules = window.location.hash.includes("rules");
-      if (dismissed && !wantRules) setShowBrief(false);
-    } catch { /* localStorage may be blocked */ }
+    if (window.location.hash.includes("rules")) setShowBrief(true);
   }, []);
 
   function playDemo() {
-    try { localStorage.setItem("space-fleet-brief-dismissed", "1"); } catch { /* ignore */ }
     setShowBrief(false);
   }
 
