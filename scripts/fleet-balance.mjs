@@ -3,7 +3,7 @@
 import { pathToFileURL } from "node:url";
 import {
   createGame, chooseCards, suggestedAssignments, placeCards, turnOf,
-  tryAction, resolveReaction, fleetHp, victoryPoints, other,
+  tryAction, resolveReaction, fleetHp, victoryPoints, other, cheapestSpecial,
 } from "../app/fleet-test/engine.mjs";
 
 export const STRATEGIES = [
@@ -14,24 +14,6 @@ export const STRATEGIES = [
   { id:"mixed-a", label:"Лига за очками / Гегемония за угрозами", A:"value", B:"threat" },
   { id:"mixed-b", label:"Лига за угрозами / Гегемония за очками", A:"threat", B:"value" },
 ];
-
-function combinations(pool, kinds, atLeast = 0) {
-  const out = [];
-  const orderedKinds = [...kinds].sort().join("/");
-  function visit(start, chosen) {
-    if (chosen.length === kinds.length) {
-      if (chosen.map(d=>d.type).sort().join("/") === orderedKinds &&
-          chosen.reduce((total, d) => total + d.value, 0) >= atLeast) out.push([...chosen]);
-      return;
-    }
-    for (let i=start; i<pool.length; i++) {
-      chosen.push(pool[i]); visit(i+1,chosen); chosen.pop();
-    }
-  }
-  visit(0,[]);
-  out.sort((a,b)=>a.reduce((n,d)=>n+d.value,0)-b.reduce((n,d)=>n+d.value,0));
-  return out[0] || null;
-}
 
 function draftChoice(g, side) {
   const number = g.round === 1 ? 3 : 1;
@@ -62,13 +44,8 @@ function chooseAction(g, side, policy) {
   const fleet = g.fleets[side];
   const target = chooseTarget(g, side, policy);
   if (!target) return { kind:"pass", diceIds:[] };
-  const base = {
-    scout:[["tech"],2], destroyer:[["attack","tech"],4],
-    cruiser:[["attack","attack"],4], interceptor:[["attack"],2],
-    frigate:[["defense"],2], dreadnought:[["attack","attack","tech"],6],
-  }[command.role];
   const special = !g.specialUsed[side].includes(command.id)
-    ? combinations(fleet.dice,base[0],base[1]) : null;
+    ? cheapestSpecial(fleet.dice, command.role) : null;
 
   if (special &&
       (command.role !== "scout" || fleet.dice.some(d=>d.id!==special[0].id && d.value<3)) &&

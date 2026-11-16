@@ -3,9 +3,55 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { runBalance } from "../scripts/fleet-balance.mjs";
 import {
-  CARD_TYPES, DEMO_FLOW, UNIT_TYPES, createGame, chooseCards, suggestedAssignments, placeCards, turnOf,
-  tryAction, resolveReaction, aiDraftChoice, aiActionChoice, aiReactionChoice, fleetHp, victoryPoints, fleetLosses
+  CARD_TYPES, DEMO_FLOW, UNIT_TYPES, SHIP_SPECIALS, createGame, chooseCards, suggestedAssignments, placeCards, turnOf,
+  tryAction, resolveReaction, aiDraftChoice, aiActionChoice, aiReactionChoice, cheapestSpecial,
+  fleetHp, victoryPoints, fleetLosses, other
 } from "../app/fleet-test/engine.mjs";
+
+function assertOrphanFree(source, names) {
+  for (const name of names) {
+    const definitions = source.match(new RegExp(`(?:export\\s+)?function\\s+${name}\\s*\\(`, "g")) ?? [];
+    const calls = source.match(new RegExp(`\\b${name}\\s*\\(`, "g")) ?? [];
+    assert.equal(definitions.length, 1, `${name} must have exactly one definition`);
+    assert.ok(
+      calls.length > definitions.length,
+      `${name} is defined but unused, or callers were left after deleting the definition`,
+    );
+  }
+}
+
+function forceTurn(g, role) {
+  const side = g.fleets.A.units.some(u => u.role === role) ? "A" : "B";
+  const unit = g.fleets[side].units.find(u => u.role === role);
+  assert.ok(unit, "missing ship " + role);
+  const next = structuredClone(g);
+  next.phase = "activate";
+  next.pending = null;
+  next.specialUsed = { A: [], B: [] };
+  const padSide = next.fleets[side].units.some(u => u.id !== unit.id && u.hp > 0) ? side : other(side);
+  const pad = next.fleets[padSide].units.find(u => u.id !== unit.id && u.hp > 0);
+  next.queue = [
+    {
+      side, id: unit.id, role, initiative: unit.initiative,
+      wave: 1, cardId: "chain-" + role, cardName: "Цепочка",
+    },
+  ];
+  if (pad) {
+    next.queue.push({
+      side: padSide, id: pad.id, role: pad.role, initiative: pad.initiative,
+      wave: 1, cardId: "chain-pad", cardName: "Pad",
+    });
+  }
+  next.index = 0;
+  return { g: next, side, unit, enemy: next.fleets[other(side)].units.find(u => u.hp > 0) };
+}
+
+function diceForSpecial(role) {
+  const spec = SHIP_SPECIALS[role];
+  const payment = spec.types.map((type, i) => ({ id: "pay-" + role + "-" + i, type, value: 3 }));
+  if (role === "scout") payment.push({ id: "boost-target", type: "attack", value: 1 });
+  return payment;
+}
 
 function draftAndPlace(g) {
   for (const side of ["A", "B"]) {
@@ -248,4 +294,61 @@ test("ship cards are only targetable on opponent's side while old game stays unt
   const ui = readFileSync(new URL("../app/fleet-test/page.jsx", import.meta.url), "utf8");
   assert.match(ui, /turn\?\.side !== side/);
   assert.match(ui, /onTarget\(unit\.id\)/);
+});
+
+test("engine keeps one special table and no orphaned function calls", () => {
+  const source = readFileSync(new URL("../app/fleet-test/engine.mjs", import.meta.url), "utf8");
+  const balance = readFileSync(new URL("../scripts/fleet-balance.mjs", import.meta.url), "utf8");
+  assert.deepEqual(Object.keys(SHIP_SPECIALS).sort(), Object.keys(UNIT_TYPES).sort());
+  assert.match(source, /export const SHIP_SPECIALS/);
+  assert.doesNotMatch(source, /interceptor: \[\[\"attack\"\], 2\]/);
+  assert.doesNotMatch(balance, /scout:\[\["tech"\],2\]/);
+  assertOrphanFree(source, [
+    "beginActivation", "applyDamage", "victory", "advance", "nextTurn",
+    "launch", "cheapestSpecial",
+  ]);
+});
+
+test("every ship special is reachable through tryAction, not a truncated AI copy", () => {
+  for (const role of Object.keys(UNIT_TYPES)) {
+    const primed = forceTurn(draftAndPlace(createGame("special-chain-" + role)), role);
+    primed.g.fleets[primed.side].dice = diceForSpecial(role);
+    const payment = primed.g.fleets[primed.side].dice
+      .filter(d => d.id.startsWith("pay-"))
+      .map(d => d.id);
+    const beforeShield = primed.g.fleets[primed.side].shield;
+    const beforeEnemyHp = primed.g.fleets[other(primed.side)].units.reduce((n, u) => n + u.hp, 0);
+    const next = tryAction(primed.g, {
+      kind: "special",
+      diceIds: payment,
+      targetId: primed.enemy.id,
+    });
+    assert.notEqual(next, primed.g, role + " special must apply");
+    assert.ok(next.specialUsed[primed.side].includes(primed.unit.id), role + " marked used");
+    if (role === "scout") {
+      const boosted = next.fleets[primed.side].dice.find(d => d.id === "boost-target");
+      assert.equal(boosted.value, 3);
+    } else if (role === "frigate") {
+      assert.ok(next.fleets[primed.side].shield > beforeShield);
+    } else {
+      const afterEnemyHp = next.fleets[other(primed.side)].units.reduce((n, u) => n + u.hp, 0);
+      const pending = next.phase === "react" ? next.pending.original : 0;
+      assert.ok(
+        afterEnemyHp < beforeEnemyHp || pending > 0 || next.phase === "done",
+        role + " special must deal damage",
+      );
+    }
+  }
+});
+
+test("live AI and cheapestSpecial share one table for League and Hegemony ships", () => {
+  for (const role of Object.keys(UNIT_TYPES)) {
+    const primed = forceTurn(draftAndPlace(createGame("ai-chain-" + role)), role);
+    primed.g.fleets[primed.side].dice = diceForSpecial(role);
+    const combo = cheapestSpecial(primed.g.fleets[primed.side].dice, role);
+    assert.ok(combo, role + " must have a legal special payment");
+    const choice = aiActionChoice(primed.g);
+    assert.equal(choice.kind, "special", role + " AI should prefer the printed special");
+    assert.deepEqual(choice.diceIds, combo.map(d => d.id));
+  }
 });

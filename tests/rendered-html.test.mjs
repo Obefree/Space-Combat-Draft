@@ -2,6 +2,18 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
+function assertOrphanFree(source, names) {
+  for (const name of names) {
+    const definitions = source.match(new RegExp(`function\\s+${name}\\s*\\(`, "g")) ?? [];
+    const calls = source.match(new RegExp(`\\b${name}\\s*\\(`, "g")) ?? [];
+    assert.equal(definitions.length, 1, `${name} must have exactly one definition`);
+    assert.ok(
+      calls.length > definitions.length,
+      `${name} is defined but the call chain never reaches it, or callers were left after the definition was deleted`,
+    );
+  }
+}
+
 async function render() {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
@@ -60,7 +72,19 @@ test("keeps the space combat rules encoded in source", async () => {
   assert.match(source, /hand: deckA\.slice\(0, BATTLE_HAND_SIZE\)/);
   assert.match(source, /hand: deckB\.slice\(0, BATTLE_HAND_SIZE\)/);
   assert.match(source, /function confirmDeploymentSelection\(state: GameState\): GameState/);
+  assert.match(source, /function chargeActiveCreature\(state: GameState\): GameState/);
+  assert.match(source, /function chooseChargeDice\(/);
   assert.match(source, /function resolveAbility\(/);
+  assertOrphanFree(source, [
+    "chargeActiveCreature",
+    "chooseChargeDice",
+    "confirmDeploymentSelection",
+    "resolveAbility",
+    "advanceActivation",
+    "deployOneCreature",
+    "addDiceToCreature",
+    "findPayment",
+  ]);
   assert.match(source, /findPayment\(actor\.attached, ability\.cost\)/);
   assert.match(source, /creature\.attached, ability\.cost/);
   assert.match(source, /function ChargeRack/);
