@@ -60,6 +60,12 @@ test("keeps the space combat rules encoded in source", async () => {
   assert.match(source, /hand: deckA\.slice\(0, BATTLE_HAND_SIZE\)/);
   assert.match(source, /hand: deckB\.slice\(0, BATTLE_HAND_SIZE\)/);
   assert.match(source, /function confirmDeploymentSelection\(state: GameState\): GameState/);
+  assert.match(source, /function chooseChargeDice\(/);
+  assert.match(source, /function chargeActiveCreature\(/);
+  assert.equal([...source.matchAll(/return chargeActiveCreature\(/g)].length, 3);
+  assert.match(source, /confirmDeploymentSelection[\s\S]*return chargeActiveCreature\(/);
+  assert.match(source, /startNextRoundOrDeployment[\s\S]*return chargeActiveCreature\(/);
+  assert.match(source, /advanceActivation[\s\S]*return chargeActiveCreature\(/);
   assert.match(source, /function resolveAbility\(/);
   assert.match(source, /findPayment\(actor\.attached, ability\.cost\)/);
   assert.match(source, /creature\.attached, ability\.cost/);

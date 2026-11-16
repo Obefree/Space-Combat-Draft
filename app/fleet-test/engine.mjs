@@ -16,6 +16,16 @@ export const UNIT_TYPES = {
   frigate: { name: "Фрегат", initiative: 4, glory: 4, hp: 6, art: "/card-art/space/generated/bodyguard.png", ability: "Плотный заслон", cost: "🛡2+ → значение куба +1 щита флоту", module: "Модуль: усиленный щит", why: "Щит ★4." },
   dreadnought: { name: "Дредноут", initiative: 2, glory: 2, hp: 8, art: "/card-art/space/generated/old_veteran.png", ability: "Осадный разряд", cost: "⚔ + ⚔ + ✦, сумма 6+ → 6 урона", module: "Модуль: осадный реактор", why: "Кувалда ★2." },
 };
+// Single specials table for the resolver AND every AI chooser.
+// Do not copy these costs into scripts/fleet-balance.mjs or the page.
+export const SHIP_SPECIALS = {
+  scout: { types: ["tech"], minFace: 2, boost: 2 },
+  destroyer: { types: ["attack", "tech"], minSum: 4, hit: 4 },
+  cruiser: { types: ["attack", "attack"], minSum: 4, hit: 5 },
+  interceptor: { types: ["attack"], minFace: 2, hitFromDie: true },
+  frigate: { types: ["defense"], minFace: 2, barrierBonus: 1 },
+  dreadnought: { types: ["attack", "attack", "tech"], minSum: 6, hit: 6 },
+};
 export const DEMO_FLOW = [
   { n: 1, title: "Флоты уже выбраны", what: "Лига: разведчик, эсминец, крейсер. Гегемония: перехватчик, фрегат, дредноут. Составы заданы сценарием, не драфтом.", why: "Это тактический слой 4X: в бой входят уже выбранные корабли." },
   { n: 2, title: "Выбери 3 карты из 5", what: "Колода — 10 карт (5 пар), в руке 5. На старте вводишь 3; ещё по одной в раундах 2 и 3.", why: "Выбор сразу задаёт и кубы, и будущие приказы." },
@@ -296,12 +306,14 @@ export function tryAction(state, action) {
   else if (action.kind === "brace" && typesAre(dice, ["defense"])) barrier = dice[0].value;
   else if (action.kind === "tune" && typesAre(dice, ["tech"])) boost = 1;
   else if (action.kind === "special") {
-    if (unit.role === "scout" && typesAre(dice, ["tech"]) && dice[0].value >= 2) boost = 2;
-    else if (unit.role === "interceptor" && typesAre(dice, ["attack"]) && dice[0].value >= 2) hit = dice[0].value;
-    else if (unit.role === "destroyer" && typesAre(dice, ["attack", "tech"]) && sum >= 4) hit = 4;
-    else if (unit.role === "frigate" && typesAre(dice, ["defense"]) && dice[0].value >= 2) barrier = dice[0].value + 1;
-    else if (unit.role === "cruiser" && typesAre(dice, ["attack", "attack"]) && sum >= 4) hit = 5;
-    else if (unit.role === "dreadnought" && typesAre(dice, ["attack", "attack", "tech"]) && sum >= 6) hit = 6;
+    const spec = SHIP_SPECIALS[unit.role];
+    if (!spec || !typesAre(dice, spec.types)) return state;
+    if (spec.minFace != null && dice[0].value < spec.minFace) return state;
+    if (spec.minSum != null && sum < spec.minSum) return state;
+    if (spec.hit) hit = spec.hit;
+    else if (spec.hitFromDie) hit = dice[0].value;
+    else if (spec.boost) boost = spec.boost;
+    else if (spec.barrierBonus != null) barrier = dice[0].value + spec.barrierBonus;
     else return state;
   } else return state;
 
@@ -318,9 +330,9 @@ export function tryAction(state, action) {
     msg(g, "Защитное поле " + f.name + ": +" + (f.shield - before) + " (всего " + f.shield + ").");
   }
   if (boost) {
-    const candidates = f.dice.filter(d => d.value < 3);
-    candidates.sort((a, b) => a.value - b.value || (a.type === "attack" ? -1 : 1));
-    const chosen = candidates[0];
+    const boostable = f.dice.filter(d => d.value < 3);
+    boostable.sort((a, b) => a.value - b.value || (a.type === "attack" ? -1 : 1));
+    const chosen = boostable[0];
     chosen.value = Math.min(3, chosen.value + boost);
     msg(g, "Усилен резерв: " + DIE_SYMBOL[chosen.type] + chosen.value + ".");
   }
@@ -328,7 +340,7 @@ export function tryAction(state, action) {
   else nextTurn(g);
   return g;
 }
-function candidates(dice, types, minSum = 0) {
+export function candidates(dice, types, minSum = 0) {
   const sorted = [...dice].sort((a, b) => a.value - b.value);
   if (types.length === 1) return sorted.filter(d => d.type === types[0] && d.value >= minSum).map(d => [d]);
   const out = [];
@@ -344,34 +356,53 @@ function candidates(dice, types, minSum = 0) {
   out.sort((a, b) => a.reduce((s, d) => s + d.value, 0) - b.reduce((s, d) => s + d.value, 0));
   return out;
 }
-export function aiDraftChoice(g) {
-  const cards = g.fleets.B.hand;
+function specialMin(spec) {
+  return spec.minFace ?? spec.minSum ?? 0;
+}
+export function aiDraftChoice(g, side = g.drafting) {
+  const cards = g.fleets[side].hand;
   const n = g.round === 1 ? 3 : 1;
   const score = c => c.dice.reduce((s, v) => s + (v === "attack" ? 3 : v === "defense" ? 1.5 : 2), 0);
-  return [...cards].sort((a, b) => score(b) - score(a)).slice(0, n).map(c => c.id);
+  return [...cards].sort((a, b) => score(b) - score(a) || a.id.localeCompare(b.id)).slice(0, n).map(c => c.id);
 }
 export function aiReactionChoice(g) {
-  if (g.phase !== "react") return null;
-  const options = g.fleets.B.dice.filter(d => d.type === "defense");
-  const want = g.pending?.damage || 0;
+  if (g.phase !== "react" || !g.pending) return null;
+  const hit = g.pending;
+  const fleet = g.fleets[hit.defender];
+  const unit = fleet.units.find(u => u.id === hit.target);
+  const options = fleet.dice.filter(d => d.type === "defense");
+  const want = hit.damage || 0;
   const efficient = [...options].sort((a, b) => Math.abs(a.value - want) - Math.abs(b.value - want))[0];
-  return (want > 1 && efficient) ? efficient.id : null;
+  return efficient && (want > 1 || (unit && unit.hp <= want)) ? efficient.id : null;
 }
-export function aiActionChoice(g) {
+export function pickSpecialDice(dice, role, { used = false, shield = 0 } = {}) {
+  const spec = SHIP_SPECIALS[role];
+  if (!spec || used) return null;
+  const paid = candidates(dice, spec.types, specialMin(spec))[0];
+  if (!paid) return null;
+  const ids = paid.map(d => d.id);
+  if (spec.boost && !dice.some(d => !ids.includes(d.id) && d.value < 3)) return null;
+  if (role === "frigate" && shield >= 4) return null;
+  return paid;
+}
+export function aiActionChoice(g, policy = "finish") {
   const turn = turnOf(g);
-  if (!turn || turn.side !== "B") return null;
-  const f = g.fleets.B, role = turn.role, d = f.dice;
-  const enemy = aliveUnits(g.fleets.A);
+  if (!turn) return { kind: "pass", diceIds: [] };
+  const f = g.fleets[turn.side], role = turn.role, d = f.dice;
+  const enemy = aliveUnits(g.fleets[other(turn.side)]);
   if (!enemy.length) return { kind: "pass", diceIds: [] };
-  const target = [...enemy].sort((a, b) => a.hp - b.hp || b.initiative - a.initiative)[0];
-  const patterns = {
-    interceptor: [["attack"], 2],
-    frigate: [["defense"], 2],
-    dreadnought: [["attack", "attack", "tech"], 6],
+  const score = u => {
+    if (policy === "value") return u.glory / u.hp;
+    if (policy === "threat") return (u.role === "dreadnought" || u.role === "cruiser" ? 10 : 4) - u.hp / 5;
+    if (policy === "heavy") return u.maxHp;
+    return -u.hp;
   };
-  const priority = patterns[role];
-  const special = priority ? candidates(d, priority[0], priority[1])[0] : null;
-  if (special && !g.specialUsed.B.includes(turn.id) && (role !== "frigate" || f.shield < 3)) return { kind: "special", diceIds: special.map(x => x.id), targetId: target.id };
+  const target = [...enemy].sort((a, b) => score(b) - score(a) || a.hp - b.hp || b.initiative - a.initiative)[0];
+  const special = pickSpecialDice(d, role, {
+    used: g.specialUsed[turn.side].includes(turn.id),
+    shield: f.shield,
+  });
+  if (special) return { kind: "special", diceIds: special.map(x => x.id), targetId: target.id };
   const shot = candidates(d, ["attack"], 0)[0];
   if (shot) return { kind: "fire", diceIds: shot.map(x => x.id), targetId: target.id };
   const shield = candidates(d, ["defense"], 0)[0];

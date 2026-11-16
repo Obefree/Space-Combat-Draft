@@ -3,7 +3,8 @@
 import { pathToFileURL } from "node:url";
 import {
   createGame, chooseCards, suggestedAssignments, placeCards, turnOf,
-  tryAction, resolveReaction, fleetHp, victoryPoints, other,
+  tryAction, resolveReaction, victoryPoints,
+  aiDraftChoice, aiActionChoice, aiReactionChoice,
 } from "../app/fleet-test/engine.mjs";
 
 export const STRATEGIES = [
@@ -15,97 +16,18 @@ export const STRATEGIES = [
   { id:"mixed-b", label:"Лига за угрозами / Гегемония за очками", A:"threat", B:"value" },
 ];
 
-function combinations(pool, kinds, atLeast = 0) {
-  const out = [];
-  const orderedKinds = [...kinds].sort().join("/");
-  function visit(start, chosen) {
-    if (chosen.length === kinds.length) {
-      if (chosen.map(d=>d.type).sort().join("/") === orderedKinds &&
-          chosen.reduce((total, d) => total + d.value, 0) >= atLeast) out.push([...chosen]);
-      return;
-    }
-    for (let i=start; i<pool.length; i++) {
-      chosen.push(pool[i]); visit(i+1,chosen); chosen.pop();
-    }
-  }
-  visit(0,[]);
-  out.sort((a,b)=>a.reduce((n,d)=>n+d.value,0)-b.reduce((n,d)=>n+d.value,0));
-  return out[0] || null;
-}
-
-function draftChoice(g, side) {
-  const number = g.round === 1 ? 3 : 1;
-  // Identical draft evaluation for both players.
-  const score = c => c.dice.reduce((sum, kind) =>
-    sum + (kind === "attack" ? 3 : kind === "tech" ? 2 : 1), 0);
-  return [...g.fleets[side].hand]
-    .sort((a,b)=>score(b)-score(a)||a.id.localeCompare(b.id))
-    .slice(0,number).map(c=>c.id);
-}
-
-function chooseTarget(g, side, policy) {
-  const alive = g.fleets[other(side)].units.filter(u=>u.hp>0);
-  if (!alive.length) return null;
-  const score = u => {
-    switch(policy) {
-      case "value": return u.glory/u.hp; // high VP for likely kill
-      case "threat": return (u.role === "dreadnought" || u.role === "cruiser" ? 10 : 4) - u.hp/5;
-      case "heavy": return u.maxHp;
-      default: return -u.hp; // finish damaged enemies
-    }
-  };
-  return [...alive].sort((a,b)=>score(b)-score(a)||a.hp-b.hp||b.initiative-a.initiative)[0];
-}
-
-function chooseAction(g, side, policy) {
-  const command = turnOf(g);
-  const fleet = g.fleets[side];
-  const target = chooseTarget(g, side, policy);
-  if (!target) return { kind:"pass", diceIds:[] };
-  const base = {
-    scout:[["tech"],2], destroyer:[["attack","tech"],4],
-    cruiser:[["attack","attack"],4], interceptor:[["attack"],2],
-    frigate:[["defense"],2], dreadnought:[["attack","attack","tech"],6],
-  }[command.role];
-  const special = !g.specialUsed[side].includes(command.id)
-    ? combinations(fleet.dice,base[0],base[1]) : null;
-
-  if (special &&
-      (command.role !== "scout" || fleet.dice.some(d=>d.id!==special[0].id && d.value<3)) &&
-      (command.role !== "frigate" || fleet.shield<4)) {
-    return {kind:"special",diceIds:special.map(d=>d.id),targetId:target.id};
-  }
-  const attack = [...fleet.dice].filter(d=>d.type==="attack")
-    .sort((a,b)=>b.value-a.value)[0];
-  if (attack) return {kind:"fire",diceIds:[attack.id],targetId:target.id};
-  const defense = fleet.dice.find(d=>d.type==="defense");
-  if (defense && fleet.shield<4) return {kind:"brace",diceIds:[defense.id]};
-  const tech = fleet.dice.find(d=>d.type==="tech");
-  if (tech && fleet.dice.some(d=>d.id!==tech.id&&d.value<3))
-    return {kind:"tune",diceIds:[tech.id]};
-  return {kind:"pass",diceIds:[]};
-}
-
-function chooseReaction(g) {
-  const hit = g.pending, fleet = g.fleets[hit.defender];
-  const target = fleet.units.find(u=>u.id===hit.target);
-  const candidate = fleet.dice.filter(d=>d.type==="defense")
-    .sort((a,b)=>Math.abs(a.value-hit.damage)-Math.abs(b.value-hit.damage))[0];
-  return candidate && (hit.damage>=2 || target.hp<=hit.damage) ? candidate.id : null;
-}
-
 export function simulateBattle(seed, aPolicy="finish", bPolicy="finish") {
   let game = createGame(seed, "solo"), operations=0, actions=0;
   while(game.phase!=="done" && operations++<120) {
     const before=game;
-    if(game.phase==="draft") game=chooseCards(game,draftChoice(game,game.drafting));
+    if(game.phase==="draft") game=chooseCards(game,aiDraftChoice(game));
     else if(game.phase==="place") game=placeCards(game,suggestedAssignments(game,game.placing));
     else if(game.phase==="activate") {
       actions++;
       const actor=turnOf(game).side;
-      game=tryAction(game,chooseAction(game,actor,actor==="A"?aPolicy:bPolicy));
+      game=tryAction(game,aiActionChoice(game, actor==="A"?aPolicy:bPolicy));
     }
-    else if(game.phase==="react") game=resolveReaction(game,chooseReaction(game));
+    else if(game.phase==="react") game=resolveReaction(game,aiReactionChoice(game));
     if(game===before) throw Error("Invalid transition in "+seed+" phase="+game.phase);
   }
   if(game.phase!=="done") throw Error("Battle did not finish: "+seed);
