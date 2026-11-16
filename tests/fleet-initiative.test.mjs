@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { readFileSync } from "node:fs";
 import { runBalance } from "../scripts/fleet-balance.mjs";
 import {
-  CARD_TYPES, DEMO_FLOW, createGame, chooseCards, suggestedAssignments, placeCards, turnOf,
+  CARD_TYPES, DEMO_FLOW, UNIT_TYPES, createGame, chooseCards, suggestedAssignments, placeCards, turnOf,
   tryAction, resolveReaction, aiDraftChoice, aiActionChoice, aiReactionChoice, fleetHp, victoryPoints, fleetLosses
 } from "../app/fleet-test/engine.mjs";
 
