@@ -328,7 +328,16 @@ export function tryAction(state, action) {
   else nextTurn(g);
   return g;
 }
-function candidates(dice, types, minSum = 0) {
+export const SPECIAL_PATTERNS = {
+  scout: [["tech"], 2],
+  destroyer: [["attack", "tech"], 4],
+  cruiser: [["attack", "attack"], 4],
+  interceptor: [["attack"], 2],
+  frigate: [["defense"], 2],
+  dreadnought: [["attack", "attack", "tech"], 6],
+};
+
+export function findDiceCandidates(dice, types, minSum = 0) {
   const sorted = [...dice].sort((a, b) => a.value - b.value);
   if (types.length === 1) return sorted.filter(d => d.type === types[0] && d.value >= minSum).map(d => [d]);
   const out = [];
@@ -344,39 +353,53 @@ function candidates(dice, types, minSum = 0) {
   out.sort((a, b) => a.reduce((s, d) => s + d.value, 0) - b.reduce((s, d) => s + d.value, 0));
   return out;
 }
-export function aiDraftChoice(g) {
-  const cards = g.fleets.B.hand;
+
+function draftScore(card) {
+  return card.dice.reduce((sum, kind) => sum + (kind === "attack" ? 3 : kind === "tech" ? 2 : 1.5), 0);
+}
+
+export function aiDraftChoice(g, side = g.drafting) {
+  const cards = g.fleets[side].hand;
   const n = g.round === 1 ? 3 : 1;
-  const score = c => c.dice.reduce((s, v) => s + (v === "attack" ? 3 : v === "defense" ? 1.5 : 2), 0);
-  return [...cards].sort((a, b) => score(b) - score(a)).slice(0, n).map(c => c.id);
+  return [...cards].sort((a, b) => draftScore(b) - draftScore(a) || a.id.localeCompare(b.id)).slice(0, n).map(c => c.id);
 }
+
 export function aiReactionChoice(g) {
-  if (g.phase !== "react") return null;
-  const options = g.fleets.B.dice.filter(d => d.type === "defense");
-  const want = g.pending?.damage || 0;
-  const efficient = [...options].sort((a, b) => Math.abs(a.value - want) - Math.abs(b.value - want))[0];
-  return (want > 1 && efficient) ? efficient.id : null;
+  if (g.phase !== "react" || !g.pending) return null;
+  const hit = g.pending;
+  const fleet = g.fleets[hit.defender];
+  const target = fleet.units.find(u => u.id === hit.target);
+  const candidate = fleet.dice.filter(d => d.type === "defense")
+    .sort((a, b) => Math.abs(a.value - hit.damage) - Math.abs(b.value - hit.damage) || a.id.localeCompare(b.id))[0];
+  return candidate && (hit.damage >= 2 || target?.hp <= hit.damage) ? candidate.id : null;
 }
-export function aiActionChoice(g) {
+
+export function aiActionChoice(g, policy = "finish") {
   const turn = turnOf(g);
-  if (!turn || turn.side !== "B") return null;
-  const f = g.fleets.B, role = turn.role, d = f.dice;
-  const enemy = aliveUnits(g.fleets.A);
+  if (!turn) return { kind: "pass", diceIds: [] };
+  const fleet = g.fleets[turn.side];
+  const enemy = aliveUnits(g.fleets[other(turn.side)]);
   if (!enemy.length) return { kind: "pass", diceIds: [] };
-  const target = [...enemy].sort((a, b) => a.hp - b.hp || b.initiative - a.initiative)[0];
-  const patterns = {
-    interceptor: [["attack"], 2],
-    frigate: [["defense"], 2],
-    dreadnought: [["attack", "attack", "tech"], 6],
+  const score = (unit) => {
+    if (policy === "value") return unit.glory / unit.hp;
+    if (policy === "threat") return (unit.role === "dreadnought" || unit.role === "cruiser" ? 10 : 4) - unit.hp / 5;
+    if (policy === "heavy") return unit.maxHp;
+    return -unit.hp;
   };
-  const priority = patterns[role];
-  const special = priority ? candidates(d, priority[0], priority[1])[0] : null;
-  if (special && !g.specialUsed.B.includes(turn.id) && (role !== "frigate" || f.shield < 3)) return { kind: "special", diceIds: special.map(x => x.id), targetId: target.id };
-  const shot = candidates(d, ["attack"], 0)[0];
-  if (shot) return { kind: "fire", diceIds: shot.map(x => x.id), targetId: target.id };
-  const shield = candidates(d, ["defense"], 0)[0];
-  if (shield && f.shield < 5) return { kind: "brace", diceIds: shield.map(x => x.id) };
-  const tech = candidates(d, ["tech"], 0)[0];
-  if (tech && d.some(x => x.id !== tech[0].id && x.value < 3)) return { kind: "tune", diceIds: tech.map(x => x.id) };
+  const target = [...enemy].sort((a, b) => score(b) - score(a) || a.hp - b.hp || b.initiative - a.initiative)[0];
+  const pattern = SPECIAL_PATTERNS[turn.role];
+  const special = pattern && !g.specialUsed[turn.side].includes(turn.id)
+    ? findDiceCandidates(fleet.dice, pattern[0], pattern[1])[0] : null;
+  if (special &&
+      (turn.role !== "scout" || fleet.dice.some(d => !special.some(s => s.id === d.id) && d.value < 3)) &&
+      (turn.role !== "frigate" || fleet.shield < 3)) {
+    return { kind: "special", diceIds: special.map(d => d.id), targetId: target.id };
+  }
+  const shot = findDiceCandidates(fleet.dice, ["attack"], 0)[0];
+  if (shot) return { kind: "fire", diceIds: shot.map(d => d.id), targetId: target.id };
+  const shield = findDiceCandidates(fleet.dice, ["defense"], 0)[0];
+  if (shield && fleet.shield < 5) return { kind: "brace", diceIds: shield.map(d => d.id) };
+  const tech = findDiceCandidates(fleet.dice, ["tech"], 0)[0];
+  if (tech && fleet.dice.some(d => d.id !== tech[0].id && d.value < 3)) return { kind: "tune", diceIds: tech.map(d => d.id) };
   return { kind: "pass", diceIds: [] };
 }

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { runBalance } from "../scripts/fleet-balance.mjs";
+import { runBalance, simulateBattle } from "../scripts/fleet-balance.mjs";
 import {
-  CARD_TYPES, DEMO_FLOW, UNIT_TYPES, createGame, chooseCards, suggestedAssignments, placeCards, turnOf,
+  CARD_TYPES, DEMO_FLOW, UNIT_TYPES, SPECIAL_PATTERNS, createGame, chooseCards, suggestedAssignments, placeCards, turnOf,
   tryAction, resolveReaction, aiDraftChoice, aiActionChoice, aiReactionChoice, fleetHp, victoryPoints, fleetLosses
 } from "../app/fleet-test/engine.mjs";
 
@@ -248,4 +248,59 @@ test("ship cards are only targetable on opponent's side while old game stays unt
   const ui = readFileSync(new URL("../app/fleet-test/page.jsx", import.meta.url), "utf8");
   assert.match(ui, /turn\?\.side !== side/);
   assert.match(ui, /onTarget\(unit\.id\)/);
+});
+
+test("one live AI covers every ship special instead of a Hegemony-only stub", () => {
+  assert.deepEqual(Object.keys(SPECIAL_PATTERNS).sort(), Object.keys(UNIT_TYPES).sort());
+  const engine = readFileSync(new URL("../app/fleet-test/engine.mjs", import.meta.url), "utf8");
+  const harness = readFileSync(new URL("../scripts/fleet-balance.mjs", import.meta.url), "utf8");
+  assert.equal(engine.includes("if (!turn || turn.side !== \"B\") return null;"), false);
+  assert.equal(engine.includes("const cards = g.fleets.B.hand;"), false);
+  assert.match(harness, /aiDraftChoice\(game,game\.drafting\)/);
+  assert.match(harness, /aiActionChoice\(game,/);
+  assert.match(harness, /aiReactionChoice\(game\)/);
+  assert.equal(harness.includes("function chooseAction"), false);
+  assert.equal(harness.includes("function combinations"), false);
+});
+
+test("AI uses League scout special, not only Hegemony interceptor/frigate/dreadnought", () => {
+  const g = draftAndPlace(createGame("scout-special"));
+  const scout = g.fleets.A.units.find(u => u.role === "scout");
+  g.queue = [{ side: "A", id: scout.id, role: "scout", initiative: 8, wave: 1, cardId: "cmd", cardName: "Наведение" }];
+  g.index = 0;
+  g.phase = "activate";
+  g.specialUsed = { A: [], B: [] };
+  g.fleets.A.dice = [
+    { id: "tech-special", type: "tech", value: 2 },
+    { id: "attack-boost", type: "attack", value: 1 },
+  ];
+  const action = aiActionChoice(g);
+  assert.equal(action.kind, "special");
+  assert.deepEqual(action.diceIds, ["tech-special"]);
+  const next = tryAction(g, action);
+  assert.notEqual(next, g);
+  assert.equal(next.fleets.A.dice.some(d => d.id === "tech-special"), false);
+  assert.equal(next.fleets.A.dice.find(d => d.id === "attack-boost").value, 3);
+});
+
+test("AI reaction spends a shield on a 1-damage hit that would kill the ship", () => {
+  const g = draftAndPlace(createGame("lethal-react"));
+  const unit = g.fleets.A.units[0];
+  unit.hp = 1;
+  g.phase = "react";
+  g.pending = { attacker: "B", defender: "A", target: unit.id, damage: 1, original: 1 };
+  g.fleets.A.dice = [{ id: "shield-1", type: "defense", value: 1 }, ...g.fleets.A.dice.filter(d => d.type !== "defense")];
+  assert.equal(aiReactionChoice(g), "shield-1");
+  const next = resolveReaction(g, aiReactionChoice(g));
+  assert.equal(next.fleets.A.units.find(u => u.id === unit.id).hp, 1);
+  assert.equal(next.fleets.A.dice.some(d => d.id === "shield-1"), false);
+});
+
+test("shared AI finishes a full draft-place-activate-react-next-round chain for both sides", () => {
+  const { game, actions } = simulateBattle("chain-both-sides-01", "finish", "value");
+  assert.equal(game.phase, "done");
+  assert.ok(actions > 4);
+  assert.ok(["A", "B", "draw"].includes(game.winner));
+  assert.equal(victoryPoints(game.fleets.A), game.result.scoreA);
+  assert.equal(victoryPoints(game.fleets.B), game.result.scoreB);
 });
