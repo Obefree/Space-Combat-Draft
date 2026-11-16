@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { runBalance } from "../scripts/fleet-balance.mjs";
 import {
-  CARD_TYPES, DEMO_FLOW, UNIT_TYPES, createGame, chooseCards, suggestedAssignments, placeCards, turnOf,
-  tryAction, resolveReaction, aiDraftChoice, aiActionChoice, aiReactionChoice, fleetHp, victoryPoints, fleetLosses
+  CARD_TYPES, DEMO_FLOW, UNIT_TYPES, SHIP_SPECIALS, createGame, chooseCards, suggestedAssignments, placeCards, turnOf,
+  tryAction, resolveReaction, aiDraftChoice, aiActionChoice, aiReactionChoice, pickSpecialDice, fleetHp, victoryPoints
 } from "../app/fleet-test/engine.mjs";
 
 function draftAndPlace(g) {
@@ -248,4 +248,86 @@ test("ship cards are only targetable on opponent's side while old game stays unt
   const ui = readFileSync(new URL("../app/fleet-test/page.jsx", import.meta.url), "utf8");
   assert.match(ui, /turn\?\.side !== side/);
   assert.match(ui, /onTarget\(unit\.id\)/);
+});
+
+test("one specials table covers every hull; balance harness does not keep a parallel AI", () => {
+  assert.deepEqual(Object.keys(SHIP_SPECIALS).sort(), Object.keys(UNIT_TYPES).sort());
+  const balance = readFileSync(new URL("../scripts/fleet-balance.mjs", import.meta.url), "utf8");
+  assert.match(balance, /aiDraftChoice/);
+  assert.match(balance, /aiActionChoice/);
+  assert.match(balance, /aiReactionChoice/);
+  assert.doesNotMatch(balance, /function combinations\(/);
+  assert.doesNotMatch(balance, /function draftChoice\(/);
+  assert.doesNotMatch(balance, /function chooseAction\(/);
+  assert.doesNotMatch(balance, /function chooseReaction\(/);
+  const engine = readFileSync(new URL("../app/fleet-test/engine.mjs", import.meta.url), "utf8");
+  assert.match(engine, /export const SHIP_SPECIALS/);
+  assert.doesNotMatch(engine, /turn\.side !== "B"/);
+  assert.doesNotMatch(engine, /g\.fleets\.B\.hand/);
+});
+
+test("pickSpecialDice pays the printed cost for every ship and is refused after use", () => {
+  for (const [role, spec] of Object.entries(SHIP_SPECIALS)) {
+    const dice = spec.types.map((type, i) => ({ id: role + "-" + i, type, value: 3 }));
+    if (spec.boost) dice.push({ id: role + "-boost", type: "attack", value: 1 });
+    const paid = pickSpecialDice(dice, role, { used: false, shield: 0 });
+    assert.ok(paid, role);
+    assert.equal(paid.length, spec.types.length);
+    assert.equal(pickSpecialDice(dice, role, { used: true, shield: 0 }), null);
+  }
+});
+
+test("live AI uses League scout special and the resolver accepts it", () => {
+  let g = draftAndPlace(createGame("scout-special"));
+  const idx = g.queue.findIndex(q => q.role === "scout" && g.fleets[q.side].units.some(u => u.id === q.id && u.hp > 0));
+  assert.ok(idx >= 0);
+  g.index = idx;
+  const turn = turnOf(g);
+  g.fleets[turn.side].dice = [
+    { id: "scout-tech", type: "tech", value: 2 },
+    { id: "scout-atk", type: "attack", value: 1 },
+  ];
+  const action = aiActionChoice(g);
+  assert.equal(action.kind, "special");
+  assert.deepEqual(action.diceIds, ["scout-tech"]);
+  const next = tryAction(g, action);
+  assert.notEqual(next, g);
+  assert.equal(next.fleets[turn.side].dice.find(d => d.id === "scout-atk").value, 3);
+  assert.ok(next.specialUsed[turn.side].includes(turn.id));
+});
+
+test("AI reaction spends a defense die when 1 damage would kill", () => {
+  let g = draftAndPlace(createGame("react-save"));
+  const turn = turnOf(g);
+  const enemySide = turn.side === "A" ? "B" : "A";
+  const target = g.fleets[enemySide].units.find(u => u.hp > 0);
+  target.hp = 1;
+  g.fleets[enemySide].shield = 0;
+  g.fleets[enemySide].dice = [{ id: "save-1", type: "defense", value: 1 }];
+  const attack = g.fleets[turn.side].dice.find(d => d.type === "attack");
+  assert.ok(attack);
+  attack.value = 1;
+  g = tryAction(g, { kind: "fire", diceIds: [attack.id], targetId: target.id });
+  assert.equal(g.phase, "react");
+  assert.equal(aiReactionChoice(g), "save-1");
+  g = resolveReaction(g, aiReactionChoice(g));
+  assert.equal(g.fleets[enemySide].units.find(u => u.id === target.id).hp, 1);
+});
+
+test("live AI chain for both sides never stalls and always finishes", () => {
+  for (let seed = 0; seed < 50; seed++) {
+    let g = createGame("chain-" + seed, "solo");
+    let steps = 0;
+    while (g.phase !== "done" && steps++ < 120) {
+      const before = g;
+      if (g.phase === "draft") g = chooseCards(g, aiDraftChoice(g));
+      else if (g.phase === "place") g = placeCards(g, suggestedAssignments(g, g.placing));
+      else if (g.phase === "react") g = resolveReaction(g, aiReactionChoice(g));
+      else if (g.phase === "activate") g = tryAction(g, aiActionChoice(g));
+      else throw new Error("unexpected phase " + g.phase + " seed " + seed);
+      assert.notEqual(g, before, "stalled seed " + seed + " phase " + before.phase);
+    }
+    assert.equal(g.phase, "done", "unfinished seed " + seed);
+    assert.ok(g.result);
+  }
 });
