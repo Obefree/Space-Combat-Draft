@@ -162,3 +162,69 @@
 @media (max-width:420px){
   .ftDemoCards{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* 2026-11-16: fleet battle uses the ORIGINAL two-sided initiative axis.
+   The physical order starts on the RIGHT with the highest initiative. */
+.ftBattlefield{max-width:100%;margin-bottom:13px;overflow:hidden}
+.ftBattlefield .ftPanelHead small{font-size:11px;color:#f3c881}
+.ftBattlefieldMeta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  margin:0 0 11px;padding:0 4px;font-size:12px;color:#c3c5d8}
+.ftBattlefieldMeta strong{color:#f0c980;font-size:12px}
+.ftBattlefieldScroller{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;
+  padding:8px 2px 16px;direction:rtl;scrollbar-color:#b59c74 #1b2033;
+  border-radius:8px}
+.ftBattlefieldLine{display:flex;flex-direction:row;direction:rtl;gap:11px;
+  width:max-content;min-width:100%;align-items:stretch}
+.ftBattlefieldColumn{direction:ltr;display:grid;grid-template-rows:355px 48px 355px;
+  flex:0 0 248px;gap:7px;min-width:0}
+.ftBattlefieldSlot{min-height:0;display:flex;align-items:stretch;border:1px solid #947c574d;
+  border-radius:13px;background:#fff9ec07}
+.ftBattlefieldTop{justify-content:flex-end}
+.ftBattlefieldBottom{justify-content:flex-start}
+.ftBattlefieldSlot.ftFilled{border-color:#9e8d8290}
+.ftBattlefieldAxis{display:flex;align-items:center;justify-content:space-between;gap:6px;
+  padding:6px 9px;min-height:48px;border-top:2px solid #d2ae74;border-bottom:2px solid #d2ae74;
+  color:#f6d590;background:#191d2f}
+.ftBattlefieldAxis>span{font-size:17px;font-weight:900;white-space:nowrap}
+.ftBattlefieldAxis>strong{font-size:10px;letter-spacing:.07em;text-align:right;color:#d5b582}
+.ftBattlefieldAxis.ftAxisActive{background:#65503f;border-color:#ffda8e;box-shadow:0 0 15px #e3b67880}
+.ftBattlefieldSlot .ftShip{display:flex;flex-direction:column;width:100%;height:100%;min-height:0;
+  text-align:left;overflow:hidden;background:linear-gradient(150deg,#293754,#18243b)}
+.ftBattlefieldSlot .ftShipImage{position:relative;min-height:115px;height:115px;flex:0 0 115px}
+.ftBattlefieldSlot .ftShipText{flex:1;padding:9px 10px;display:flex;flex-direction:column;gap:5px}
+.ftShipTitle{display:flex;align-items:start;justify-content:space-between;gap:8px}
+.ftShipTitle b{font-size:14px;line-height:1.2}
+.ftShipTitle small{float:none;font-size:10px;white-space:nowrap}
+.ftBattlefieldSlot .ftHealth{margin:0;font-size:11px;line-height:1.3;color:#dfd7d4}
+.ftBattlefieldSlot .ftHealthBar{margin:0 0 2px}
+.ftShipOrders{color:#e7c180;font-size:11px;line-height:1.25}
+.ftShipSpecial{display:flex;flex-direction:column;gap:4px;min-height:108px;
+  border:1px solid #bd975683;border-radius:9px;background:#f0c47c15;padding:8px;
+  margin-top:2px}
+.ftShipSpecialHead{display:flex;justify-content:space-between;gap:4px}
+.ftShipSpecialHead>span{font-size:9px;letter-spacing:.045em;color:#f2c784;font-weight:850}
+.ftShipSpecialHead>em{font-size:9px;line-height:1.2;color:#c5c8d7;font-style:normal;white-space:nowrap}
+.ftShipSpecial>strong{font-size:13px;line-height:1.25;color:#fff4dc}
+.ftShipPayment{font-size:12px;font-weight:900;color:#ffd9a4}
+.ftShipEffect{font-size:12px;line-height:1.3;color:#efebea;white-space:normal;overflow-wrap:anywhere}
+.ftShipModule{font-size:10px;color:#aec8de;line-height:1.3;margin-top:auto}
+.ftBattlefieldHint{margin:10px 0 0!important;color:#f5d49b!important;font-size:12px}
+.ftQueueRtl{direction:rtl;justify-content:flex-start}
+.ftQueueRtl .ftQueueChip{direction:ltr;text-align:left}
+.ftTimeline .ftQueueRtl{overflow-x:auto}
+.ftRoot .ftBattlefieldSlot .ftShip:disabled:not(.ftDead){opacity:1;color:#f8f4ed;cursor:default}
+.ftRoot .ftBattlefieldSlot .ftShip.ftDead{opacity:.36;filter:grayscale(1)}
+.ftRoot .ftBattlefieldSlot .ftShip.ftTarget{outline:3px solid #f49a90;outline-offset:-3px}
+.ftRoot .ftBattlefieldSlot .ftShip.ftCurrent{outline:3px solid #ffd280;outline-offset:-3px}
+@media(max-width:760px){
+  .ftBattlefieldMeta{font-size:11px}
+  .ftBattlefieldLine{gap:8px}
+  .ftBattlefieldColumn{flex-basis:222px;grid-template-rows:360px 46px 360px}
+  .ftBattlefieldSlot .ftShipImage{min-height:102px;height:102px;flex-basis:102px}
+  .ftBattlefieldSlot .ftShipText{min-height:0}
+}
+@media(max-width:480px){
+  .ftBattlefieldColumn{flex-basis:212px;grid-template-rows:365px 46px 365px}
+  .ftShipSpecial{padding:6px}
+  .ftShipSpecialHead{flex-wrap:wrap}
+}
