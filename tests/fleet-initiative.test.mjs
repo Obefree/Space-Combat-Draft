@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import { runBalance } from "../scripts/fleet-balance.mjs";
 import {
   CARD_TYPES, DEMO_FLOW, createGame, chooseCards, suggestedAssignments, placeCards, turnOf,
@@ -215,4 +216,37 @@ test("balance harness finishes a mix of strategies and records casualties", () =
   assert.ok(report.victoriesA>0&&report.victoriesB>0);
   assert.ok(report.averageDeadPerGame>0);
   assert.equal(report.perStrategy.length,6);
+});
+
+test("demo battlefield uses the classic two-sided initiative axis from RIGHT to LEFT", () => {
+  const ui = readFileSync(new URL("../app/fleet-test/page.jsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../app/fleet-test/fleet-test.css", import.meta.url), "utf8");
+  assert.match(ui, /function InitiativeBattlefield\(/);
+  assert.match(ui, /ftBattlefieldTop/);
+  assert.match(ui, /ftBattlefieldBottom/);
+  assert.match(ui, /lineup\.map\(/);
+  assert.match(ui, /b\.unit\.initiative - a\.unit\.initiative/);
+  assert.match(ui, /ftBattlefieldScroller" dir="rtl"/);
+  assert.match(css, /\.ftBattlefieldLine\s*\{[^}]*direction:rtl/s);
+  assert.match(css, /\.ftBattlefieldScroller\s*\{[^}]*overflow-x:auto/s);
+});
+
+test("all ships display the full special ability and activation status on battlefield cards", () => {
+  const ui = readFileSync(new URL("../app/fleet-test/page.jsx", import.meta.url), "utf8");
+  assert.match(ui, /data\.cost\.split\("→"\)/);
+  assert.match(ui, /ftShipSpecialHead/);
+  assert.match(ui, /\{data\.ability\}/);
+  assert.match(ui, /\{payment\}/);
+  assert.match(ui, /\{effect \|\| data\.cost\}/);
+  assert.match(ui, /specialSpent \? "Уже применена"/);
+  for (const ship of Object.values(UNIT_TYPES)) {
+    assert.ok(ship.ability.length>0);
+    assert.ok(ship.cost.includes("→"));
+  }
+});
+
+test("ship cards are only targetable on opponent's side while old game stays untouched", () => {
+  const ui = readFileSync(new URL("../app/fleet-test/page.jsx", import.meta.url), "utf8");
+  assert.match(ui, /turn\?\.side !== side/);
+  assert.match(ui, /onTarget\(unit\.id\)/);
 });
