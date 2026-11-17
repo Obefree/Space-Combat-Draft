@@ -18,10 +18,18 @@ export const CARD_TYPES = [
  {id:"guard",name:"Защитная реакция",timing:"defense",abilities:[ability("Прикрытие",{},"Во время удара: поглотить 2 урона","block",2),ability("Аварийная завеса",{defense:3},"Сжечь 🛡 навсегда; поглотить 5 урона","block",5)]},
  {id:"again",name:"Вторая активация",timing:"activation",abilities:[ability("Перехват управления",{},"После текущего хода ещё раз активировать выбранный свой корабль","again",1),ability("Полная готовность",{tech:3},"Сжечь ✦ навсегда; вторая активация и 2 щита флоту","again",2)]},
 ];
+// Extra demo tactics use the same fleet-wide effect rules and two alternative fields.
+CARD_TYPES.push(
+ {id:"screen",name:"Оборонительный строй",timing:"tactic",abilities:[ability("Защитный резерв",{},"Добавить 2 🛡 в общий пул на раунд","defense",2),ability("Глубокая оборона",{tech:3},"Сжечь ✦ навсегда; добавить 4 🛡 на раунд","defense",4)]},
+ {id:"sensors",name:"Сенсорная сеть",timing:"tactic",abilities:[ability("Сканирование",{},"Добавить 2 ✦ в общий пул на раунд","tech",2),ability("Широкая сеть",{defense:3},"Сжечь 🛡 навсегда; добавить 4 ✦ на раунд","tech",4)]},
+ {id:"crossfire",name:"Перекрёстный огонь",timing:"tactic",abilities:[ability("Поддержка батарей",{},"Добавить 1 ⚔ и 1 🛡 на раунд","mixed",2),ability("Усиленные батареи",{tech:3},"Сжечь ✦ навсегда; добавить 4 ⚔ на раунд","attack",4)]}
+);
+function shuffled(g,values){const result=[...values];for(let i=result.length-1;i>0;i--){const j=Math.floor(random(g)*(i+1));[result[i],result[j]]=[result[j],result[i]];}return result;}
+export function newBattle(mode="solo",defender="B"){return createGame(globalThis.crypto.randomUUID(),mode,defender,"random");}
 export const DEMO_FLOW = [
  {n:1,title:"Значки задают общий бросок",what:"В начале каждого раунда значки живых кораблей определяют бросок в общий пул игрока. Значения 1–3, как в основной игре."},
- {n:2,title:"Одна тактика на раунд",what:"Каждый флот играет одну карту из руки или пропускает. Эффект действует на весь флот. Тактики не являются модулями и не назначаются кораблям."},
- {n:3,title:"Каждый корабль ходит сам",what:"Все живые корабли активируются по инициативе справа налево, даже без тактик. При равной инициативе первым ходит обороняющийся."},
+ {n:2,title:"Одна тактика на раунд",what:"Каждый флот выбирает одну тактику взакрытую или пропускает. Обе карты раскрываются и применяются после обоих выборов. Эффект действует на весь флот. Тактики не являются модулями и не назначаются кораблям."},
+ {n:3,title:"Каждый корабль ходит сам",what:"Все живые корабли активируются по инициативе слева направо, даже без тактик. При равной инициативе первым ходит обороняющийся."},
  {n:4,title:"Две способности",what:"В свой ход выбери дешёвую способность (обычно сумма 3+ одного типа), сильную (8+ или отдельные суммы типов) либо пропусти. Одна способность завершает активацию."},
  {n:5,title:"Реакции и постоянная цена",what:"Защитная реакция и вторая активация играются в ходе раунда. Усиленное поле тактики может сжечь кубы навсегда. Обычная способность проверяет суммы общего пула и не расходует кубы."},
  {n:6,title:"Ровно три раунда",what:"После третьего раунда сравнивается сумма ★ силы выживших. При равенстве побеждает обороняющийся. Модули развития поля в этом демо не участвуют."},
@@ -47,11 +55,13 @@ function reroll(g) {
    .filter(d=>!f.burned.includes(d.id)).map(d=>({...d,value:face(g)}));
  }
 }
-export function createGame(seed="battle-01",mode="solo",defender="B") {
- const g={seed,mode,defender:defender==="A"?"A":"B",rng:hash(seed),round:1,phase:"draft",drafting:"A",queue:[],index:0,pending:null,winner:null,result:null,nextDie:0,log:[],fleets:{}};
+export function createGame(seed="battle-01",mode="solo",defender="B",scenario="fixed") {
+ const g={seed,mode,scenario,tacticChoices:{},defender:defender==="A"?"A":"B",rng:hash(seed),round:1,phase:"draft",drafting:"A",queue:[],index:0,pending:null,winner:null,result:null,nextDie:0,log:[],fleets:{}};
  for(const side of ["A","B"]) {
-  // All five demo cards are available, so both special reaction windows can be tested.
-  g.fleets[side]={name:side==="A"?"Лига Ориона":"Гегемония",units:ORDER[side].map(role=>({id:side+"-"+role,role,hp:UNIT_TYPES[role].hp,maxHp:UNIT_TYPES[role].hp,initiative:UNIT_TYPES[role].initiative,glory:UNIT_TYPES[role].glory})),dice:[],burned:[],shield:0,initiativeBonus:0,extraUsed:false,hand:CARD_TYPES.map(c=>({...structuredClone(c),id:side+"-"+c.id,type:c.id})),played:[]};
+  const roles=scenario==="random"?shuffled(g,Object.keys(UNIT_TYPES)).slice(0,3):ORDER[side];
+  const tactics=scenario==="random"?shuffled(g,CARD_TYPES.filter(c=>c.timing==="tactic")).slice(0,3):CARD_TYPES.filter(c=>["assault","reinforce","initiative"].includes(c.id));
+  const cards=[...tactics,...CARD_TYPES.filter(c=>c.timing!=="tactic")];
+  g.fleets[side]={name:side==="A"?"Лига Ориона":"Гегемония",units:roles.map(role=>({id:side+"-"+role,role,hp:UNIT_TYPES[role].hp,maxHp:UNIT_TYPES[role].hp,initiative:UNIT_TYPES[role].initiative,glory:UNIT_TYPES[role].glory})),dice:[],burned:[],shield:0,initiativeBonus:0,extraUsed:false,hand:cards.map(c=>({...structuredClone(c),id:side+"-"+c.id,type:c.id})),played:[]};
  }
  reroll(g);msg(g,"Раунд 1: корабли бросили свои кубы. Каждый флот может сыграть одну тактику.");return g;
 }
@@ -81,16 +91,24 @@ function queueShips(g) {
 }
 export function chooseCards(state,ids=[],field=0,diceIds=[]) {
  if(state.phase!=="draft"||!Array.isArray(ids)||ids.length>1||![0,1].includes(field))return state;
- const g=clone(state),side=g.drafting;
- if(ids.length) {
-  const card=g.fleets[side].hand.find(c=>c.id===ids[0]&&c.timing==="tactic");if(!card)return state;
-  const effect=useCard(g,side,card,field,diceIds);if(!effect)return state;
-  if(effect.effect==="attack")bonusDice(g,side,"attack",effect.amount);
-  if(effect.effect==="mixed"){bonusDice(g,side,"attack",effect.amount/2);bonusDice(g,side,"defense",effect.amount/2);}
-  if(effect.effect==="initiative"){g.fleets[side].initiativeBonus=effect.amount;if(field===1)bonusDice(g,side,"attack",2);}
- } else msg(g,g.fleets[side].name+": без тактики; все корабли всё равно ходят.");
- if(side==="A")g.drafting="B";else queueShips(g);return g;
+ const side=state.drafting,card=ids.length?state.fleets[side].hand.find(c=>c.id===ids[0]&&c.timing==="tactic"):null;
+ if(ids.length&&(!card||!payment(state,side,diceIds,card.abilities[field].cost)))return state;
+ const g=clone(state);g.tacticChoices[side]={cardId:card?.id||null,field,diceIds:[...diceIds]};
+ if(side==="A"){g.drafting="B";return g;}
+ // Both choices are locked before either side's hand, pool or log reveals a tactic.
+ for(const player of ["A","B"]){
+  const choice=g.tacticChoices[player];
+  if(!choice.cardId){msg(g,g.fleets[player].name+": раскрывает пропуск тактики.");continue;}
+  const played=g.fleets[player].hand.find(c=>c.id===choice.cardId);
+  const effect=useCard(g,player,played,choice.field,choice.diceIds);
+  if(!effect)return state;
+  if(["attack","defense","tech"].includes(effect.effect))bonusDice(g,player,effect.effect,effect.amount);
+  if(effect.effect==="mixed"){bonusDice(g,player,"attack",effect.amount/2);bonusDice(g,player,"defense",effect.amount/2);}
+  if(effect.effect==="initiative"){g.fleets[player].initiativeBonus=effect.amount;if(choice.field===1)bonusDice(g,player,"attack",2);}
+ }
+ g.tacticChoices={};queueShips(g);return g;
 }
+
 function finish(g) {
  const a=vote(g,"A"),b=vote(g,"B");g.winner=a===b?g.defender:a>b?"A":"B";g.phase="done";g.pending=null;
  g.result={scoreA:a,scoreB:b,kind:a===b?"defender":"points",round:3};
@@ -100,16 +118,17 @@ const vote=(g,side)=>victoryPoints(g.fleets[side]);
 function advance(g) {
  while(g.index<g.queue.length) {const t=g.queue[g.index];if(g.fleets[t.side].units.some(u=>u.id===t.id&&u.hp>0)){g.phase="activate";return;}g.index++;}
  if(g.round>=3){finish(g);return;}
- g.round++;g.phase="draft";g.drafting="A";g.queue=[];g.index=0;reroll(g);
+ g.round++;g.tacticChoices={};g.phase="draft";g.drafting="A";g.queue=[];g.index=0;reroll(g);
  msg(g,"Раунд "+g.round+": живые корабли заново бросили свои кубы. Сожжённые кубы не возвращаются.");
 }
 function next(g) {g.index++;advance(g);}
-function damage(g,p) {const u=g.fleets[p.defender].units.find(u=>u.id===p.target&&u.hp>0);if(u){const n=Math.min(u.hp,p.damage);u.hp-=n;msg(g,UNIT_TYPES[u.role].name+": −"+n+" HP"+(u.hp<=0?", уничтожен":"")+".");}}
+function damage(g,p) {const u=g.fleets[p.defender].units.find(u=>u.id===p.target&&u.hp>0);if(u){const n=Math.min(u.hp,p.damage);u.hp-=n;g.lastHit={name:UNIT_TYPES[u.role].name,damage:n,hp:u.hp,maxHp:u.maxHp};msg(g,UNIT_TYPES[u.role].name+": −"+n+" HP"+(u.hp<=0?", уничтожен":"")+".");}}
 function attack(g,side,target,amount) {
- const defender=other(side),f=g.fleets[defender];const blocked=Math.min(f.shield,amount);f.shield-=blocked;
+ g.lastHit=null;const defender=other(side),f=g.fleets[defender];const blocked=Math.min(f.shield,amount);f.shield-=blocked;
  const hit={attacker:side,defender,target,damage:amount-blocked};
+ msg(g,"Атака: "+amount+" урона; щит флота поглотил "+blocked+".");
  const reaction=f.hand.some(c=>c.timing==="defense");
- if(hit.damage>0&&reaction){g.pending=hit;g.phase="react";}else{damage(g,hit);next(g);}
+ if(hit.damage>0&&reaction){msg(g,"Ожидается защитная реакция противника: "+hit.damage+" урона до реакции.");g.pending=hit;g.phase="react";}else{damage(g,hit);next(g);}
 }
 export function tryAction(state,action) {
  const turn=turnOf(state);if(!turn||!action)return state;
@@ -128,7 +147,7 @@ export function playReaction(state,side,cardId,field=0,diceIds=[],targetId=null)
  if(card.timing==="defense") {
   if(state.phase!=="react"||state.pending?.defender!==side)return state;
   const g=clone(state),effect=useCard(g,side,card,field,diceIds);if(!effect)return state;
-  g.pending.damage=Math.max(0,g.pending.damage-effect.amount);damage(g,g.pending);g.pending=null;next(g);return g;
+  const blocked=Math.min(g.pending.damage,effect.amount);g.pending.damage=Math.max(0,g.pending.damage-effect.amount);msg(g,"Защитная реакция поглотила "+blocked+" урона.");damage(g,g.pending);g.pending=null;next(g);return g;
  }
  if(card.timing==="activation") {
   if(state.phase!=="activate"||turnOf(state)?.side!==side||state.fleets[side].extraUsed)return state;

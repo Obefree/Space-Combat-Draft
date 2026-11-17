@@ -174,6 +174,8 @@ test("serves the fleet demo at its direct URL", async () => {
   assert.match(html, /ftBattlefieldTop/);
   assert.match(html, /ftBattlefieldBottom/);
   assert.match(html, /Одна тактика на этот раунд/);
+  assert.match(html, /Повторить seed/);
+  assert.match(html, /Обе карты раскроются/);
   assert.match(html, /Даёт кубы в общий пул/);
   assert.match(html, /ДЕМО v0.4/);
   assert.equal((html.match(/ftAbilityField/g) || []).length, 22);
