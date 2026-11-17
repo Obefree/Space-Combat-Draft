@@ -1,79 +1,48 @@
-# Fleet Initiative Playtest — v0.3
-**Repo:** Obefree/Space-Combat-Draft
-**Route:** /fleet-test (separate from the existing / page). `/fleet-test` opens with visual rules landing `#demo-rules`.
-**Status:** functional prototype in branch feature/fleet-initiative-playtest; not a confirmed live deployment to spacecombat.obefree.com.
+# Fleet Initiative Playtest — v0.4
 
-## Purpose
-Preserve the old Dice Draft combat intact and test a different fleet-level loop:
-**Actual ships from 4X** → choose combat cards → **cards grant dice and become commands on initiative track** → ship acts in initiative → dice spent and removed → automatic shield absorption and optional defense reaction → next card/round.
-No separate maneuver deck, no random arrival of ships, no alternative currencies.
+Актуальное ТЗ пользователя: 17.11.2026, текущий чат Work. Оно заменяет v0.3 с назначением карт-команд.
+Канонический Sites: `appgprj_6a81aaf139188191a2c90814c716cd23`, https://spacecombat.obefree.com/fleet-test. Главную `/` не менять.
 
-## Cards: 10 per side (five pairs); opening hand: 5 shuffled cards
-| Cards (two copies each) | Dice each | Reason to choose |
-|---|---|---|
-| Боевой натиск | ⚔ ⚔ | Dedicated attack |
-| Глухая оборона | 🛡 🛡 | Defense and emergency reaction |
-| Наведение | ⚔ ✦ | Attack plus upgrade dice |
-| Тактический манёвр | 🛡 ✦ | Defensive and conversion tempo |
-| Общий резерв | ⚔ 🛡 | Flexible middle ground |
+## Базовые правила пользователя
+1. Активация принадлежит кораблю. Живые корабли ходят по инициативе; игрок выбирает способность активного корабля. Карта из руки не требуется для собственной активации.
+2. Всего три раунда: пройти очередь кораблей три раза, затем сравнить силу ★ выживших. При равенстве преимущество обороняющегося. HP не используется для определения победителя.
+3. Корабли сами дают напечатанный набор кубов. На каждом корабле минимум два поля: дешёвая способность примерно за 3+ одного типа и сильная за 8+; удачный бросок или тактики помогают собрать сильную.
+4. У карт всегда два поля способностей. Сложные эффекты могут требовать раздельных сумм (например, ⚔5 + 🛡5) и постоянного расхода кубов. Суммы цветов нельзя заменять общей суммой.
+5. Не повторять силу «за выживание» ниже: значение уже есть сверху карточки.
+6. Модули — пассивное развитие стратегического поля, базово один слот на корабль. Пока не используются в демо; не называть тактики модулями и не давать модульные бонусы.
+7. Карты руки — тактики, подкрепления, повышение инициативы и т.п.; действуют на весь флот или явно обозначенные типы кораблей. Для теста по одной обычной карте на флот каждый раунд. Отдельные реакции на защиту и вторую активацию доступны прямо в ходе раунда.
+8. После третьего раунда — подсчёт. Карточки и кубы визуально опираются на основную игру.
 
-**Faction difference (balanced playtest):** one League copy of Общий резерв becomes ⚔✦; the Hegemony keeps its copies at ⚔🛡. Both factions have exactly ten cards generating twenty dice in total if all ten are counted. League deck: 8 ⚔, 7 🛡, 5 ✦; Hegemony: 8 ⚔, 8 🛡, 4 ✦. This is deliberately small asymmetry, not a final tech tree.
+## Конкретизация для проверки демо (не дополнительные требования пользователя)
+- Значения кубов 1–3 как в основной игре; каждый корабль бросает свой набор в начале раунда. Значки на корабле задают количество и типы для броска. Результаты находятся только в общем пуле игрока, не на кораблях.
+- Обычная способность проверяет суммы нужных типов во всём общем пуле без выделения, переноса или расходования кубов. Только явно указанный эффект карты может забрать или сжечь кубы. Сожжённые кубы не восстанавливаются последующими бросками. Уже брошенные кубы остаются в общем пуле после гибели корабля; следующий бросок формируют живые корабли.
+- Одна из двух способностей завершает обычную активацию. Можно пропустить. Без сыгранных тактик все живые корабли всё равно ходят.
+- Один обычный розыгрыш на сторону в начале каждого раунда, можно отказаться. Два поля карты — альтернативы; карта уходит из руки после розыгрыша. Тактические бонусы кубов и инициативы действуют текущий раунд.
+- Пять тестовых карт доступны в руке: Боевой натиск, Подкрепление, Ускорение флота, Защитная реакция, Вторая активация. Подкрепление здесь означает снабжение всего флота кубами, без появления случайных кораблей.
+- Защитная карта разыгрывается в окне входящего урона без расходования хода. Вторая активация — во время своего хода для выбранного живого своего корабля, максимум одна такая реакция на флот за раунд.
+- Обороняющийся задаётся перед новым боем (по умолчанию Гегемония); также выигрывает равенство инициативы.
+- По уточнению пользователя от 17.11.2026 линия идёт слева направо по убыванию инициативы. Противник/ИИ сверху, свой флот снизу рядом с рукой и кубами. В solo свой флот — Лига; в hotseat нижняя сторона следует за действующим игроком. Картинки взяты из основной игры. HP, инициатива и сила кораблей сохранены из предыдущей сцены.
+- Удалены этап расстановки карт-команд, приказы за карты, модульные бонусы и повтор силы под иллюстрацией.
 
-### Card deployment and initiative track
-- Start of round 1: choose **3 out of 5** dealt cards. Immediately roll their six dice.
-- Each live strategic ship adds one base die to the opening pool (3).
-- Scout A / interceptor B adds **one extra die from a module** (1).
-- Total at battle start: **10 dice per side**.
-- Round 2: choose one of the two remaining cards and roll its 2 dice.
-- Round 3: introduce the final card and roll its 2 dice.
-- **A played card stays on the initiative track** as one command for every subsequent round; its dice are rolled **only once, when introduced**.
-- At the start of every round, the player can assign each introduced card to a living ship. Existing allocations are suggested/preserved; new cards are added to the initiative row. If the ship was destroyed, reassign its card.
-- **One placed card = exactly one activation** of its assigned ship per round. Limit: 2 command cards per ship per round. Additional cards can stay in reserve (still contributed dice, but grant no activation).
-- Initiative order: first commands in descending initiative, then second commands in descending initiative. Same-initiative ties use player A first in this test.
-- If a ship dies before its slot, that activation is lost. No card is drawn to replace it during a round.
+## Проверки
+`npm test` — сборка, server HTML, правила и сто полных партий через тот же движок.
+`npm run balance:fleet` — выборка с текущим простым ИИ, не доказательство игрового баланса.
+Визуальная проверка desktop/mobile требует браузерного инструмента; HTTP и тесты движка её не заменяют.
 
-### Dice and actions
-Every die has a type ⚔, 🛡, ✦ and a face 1/2/3; faces are rolled on entry.
-**One pool per player. No pre-attaching dice to ships.**
-On its command slot, a ship may:
-- Attack: one ⚔ → 1 damage (⚔3 → 2 damage).
-- Activate shield: one 🛡 → **+die value** temporary ship-group shields, capped at 7; automatic absorption of incoming attacks. Remaining shields expire at end of round.
-- Tune: one ✦ → increase another stored die by 1 (max 3).
-- Its own ship special attack, shield or sensor action (requires printed dice combination; see below). **Special only once per ship per round**, even if it has two commands.
-- **Pass**: consume the command activation but save every die for later in the battle.
-- Reaction during an incoming attack: optionally spend one 🛡 die to absorb its value of damage **without using any command slot**. If a prepared shield already absorbs everything, no reaction window is necessary.
+## UI по уточнению пользователя, 17.11.2026
+- Объёмные кубы как в основной игре: красная атака, голубая защита, фиолетовые технологии. Резерв разделён по типам, внутри каждого типа значения убывают. На кораблях цветные значки типов и количества для броска, без результатов и без размещённых кубов.
+- Карточка: иллюстрация с затемнением, рамка фракции, отдельные показатели инициативы/силы, HP-полоса поверх изображения, значки вклада в общий бросок и два поля способностей. Собственный корабль можно открыть крупно в диалоге.
+- Высокая инициатива слева, ход направо. Верхний ряд — противник, нижний — игрок.
+- Автоподбор масштаба по ширине и высоте окна, ручной ползунок 12–125%, полноэкранный режим убран по запросу пользователя. При увеличении можно прокручивать поле.
+- Правила боя и главная `/` этим изменением не затрагиваются.
 
-Spent dice disappear from the pool. Unspent dice remain with their rolled values between rounds. Dice are never replenished except by introducing a new card or an explicit ship ability.
+## Уточнение общего пула и открытой информации — 17.11.2026
+Прямое уточнение пользователя отменяет прежнюю реализацию размещённых/истощаемых кубов: карта определяет бросок, все результаты в общем пуле игрока, способность активируется при достаточной сумме нужных типов. Базового прикрепления кубов к кораблям нет. Отдельные карты могут забирать кубы только явно описанным эффектом.
+Пользователь должен всегда видеть текущую руку противника и сыгранные им карты. В демо информация открыта: постоянно показываются вся текущая рука, сыгранное поле каждой карты с раундом, а также общий пул кубов противника с суммами типов. Блок обновляется во время любого хода.
 
-### Fleets in the initial scenario (ship art reused from existing Space Combat Draft)
-| Faction A | Initiative | HP | Survivor VP ★ | Unique special |
-|---|---:|---:|---:|---|
-| Разведчик | 8 | 4 | **6** | ✦2+: increase one other die by 2 |
-| Эсминец | 5 | 6 | **4** | ⚔ + ✦, Σ≥4 → **4 damage** |
-| Крейсер | 3 | 8 | **1** | ⚔ + ⚔, Σ≥4 → **5 damage** |
-
-| Faction B | Initiative | HP | Survivor VP ★ | Unique special |
-|---|---:|---:|---:|---|
-| Перехватчик | 7 | 4 | **5** | ⚔2+ → **die face damage** |
-| Фрегат | 4 | 6 | **4** | 🛡2+ → **die face+1 shields** |
-| Дредноут | 2 | 8 | **2** | ⚔ + ⚔ + ✦, Σ≥6 → 6 damage |
-
-All six ships can attack with ordinary ⚔ dice; none is merely a bonus provider.
-
-### Battle end and limitations
-- **Three rounds or elimination of all ships on one side.** The winner is the player with **more ★ Victory Points from surviving ships**. Destroyed ships award zero. **HP is never used as victory score or as a tiebreaker.**
-- Each fleet begins with **11 maximum survivor-VP**. Large, hard-to-kill ships award only **1–2 VP**; vulnerable ships give 5–6 VP. This makes preserving light ships strategically valuable without turning hardiness into automatic victory.
-- Separate final outcomes: points decision, drawn points, complete annihilation of a fleet, mutual annihilation (the engine can classify simultaneous loss, although the current single-target attack rules do not naturally create it).
-- All actual ships in the battle are chosen by the 4X layer. In this prototype the input is a fixed three-ship lineup per side.
-- Single-player vs simple scripted AI, or hotseat.
-- Currently no realtime multiplayer, moveable ship positions, long-range distinction or full technology tree.
-- UI is an experimental scene inside the existing game repo, not a replacement for the original / route.
-- **Deployment note:** Public spacecombat.obefree.com is hosted in ChatGPT Sites; GitHub branch commits do not prove a live deployment. To publish into that existing project, use its canonical Sites editor/hosting access, preserving the original route.
-- Run local engine tests: \`node --test tests/fleet-initiative.test.mjs\`.
-- App build command (when the project environment and deps are available): \`npm run build\`.
-
-## Balance verification (2026-11-15)
-
-- Run reproducible multi-policy test: `npm run balance:fleet` (1500 seeded matches: 250 across each of six strategies), or `node scripts/fleet-balance.mjs 1000` for 1000 games **per strategy**.
-- Current sample: League 631, Hegemony 799, draws 70 / 1500. Average 2.176 destroyed ships per match; 13 complete League wipes and 1 complete Hegemony wipe. See `docs/FLEET_BALANCE_REPORT.md` for exact scripts, assumptions and by-strategy breakdown.
-- This is a **provisional playable balance**, not a claim that both factions are equally strong for every individual targeting tactic. Keep original `/` and classic combat untouched.
+## Прямое управление способностями — 17.11.2026
+- Способности, удовлетворяющие суммам общего пула, подсвечены на кораблях. У уничтоженных кораблей подсветки нет.
+- Во время собственной активации доступные способности становятся кнопками прямо на карточке. Для атаки: нажать способность, затем изображение живого корабля противника. Эффект выполняется после выбора цели; выбор можно отменить.
+- Защитный эффект без вражеской цели применяется сразу. То же управление доступно в увеличенной карточке активного корабля.
+- Дублирующая панель кнопок способностей под полем заменена подсказкой. Перетаскивание кубов на корабли не используется: пороги проверяются по общему пулу.
+- Полноэкранная кнопка убрана по запросу пользователя. Рука, сыгранные карты и кубы остаются в обычном интерфейсе; ручной и автоматический масштаб поля сохранены.
