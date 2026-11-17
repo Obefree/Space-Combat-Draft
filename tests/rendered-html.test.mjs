@@ -14,13 +14,13 @@ function assertOrphanFree(source, names) {
   }
 }
 
-async function render() {
+async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
+    new Request(new URL(path, "http://localhost/"), {
       headers: { accept: "text/html" },
     }),
     {
@@ -178,6 +178,7 @@ test("serves the fleet demo at its direct URL", async () => {
   assert.match(html, /ДЕМО v0.4/);
   assert.equal((html.match(/ftAbilityField/g) || []).length, 12);
   assert.doesNotMatch(html, /за выживание|назначь исполнителей|КОМАНДНЫЕ КАРТЫ/);
+  assert.doesNotMatch(html, /aria-current="page">Классический бой/);
   assert.match(html, /href="\/"/);
 });
 

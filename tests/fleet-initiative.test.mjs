@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import {createGame,chooseCards,turnOf,tryAction,availableDice,UNIT_TYPES,CARD_TYPES,findPayment,canPay,playReaction,resolveReaction,aiStep,victoryPoints,aliveUnits} from '../app/fleet-test/engine.mjs';
+import {createGame,chooseCards,turnOf,tryAction,availableDice,UNIT_TYPES,CARD_TYPES,findPayment,canPay,playReaction,resolveReaction,aiStep,aiActionChoice,aiDraftChoice,victoryPoints,aliveUnits,other} from '../app/fleet-test/engine.mjs';
 const start=g=>chooseCards(chooseCards(g,[]),[]);
 const die=(id,type,value,source=null)=>({id,type,value,source,spent:false});
 function finishRound(g){const round=g.round;let n=0;while(g.phase!=='done'&&g.round===round){assert.ok(n++<100);g=g.phase==='react'?resolveReaction(g):tryAction(g,{kind:'pass'});}return g;}
@@ -16,3 +17,48 @@ test('defensive reaction reduces incoming damage without using a ship turn; reus
 test('second activation card inserts exactly one extra ship turn, no ordinary cards required',()=>{let g=start(createGame());const card=g.fleets.A.hand.find(c=>c.timing==='activation');const u=turnOf(g);g=playReaction(g,'A',card.id,0,[],u.id);assert.equal(g.queue.length,7);assert.equal(g.queue[1].id,u.id);assert.equal(g.queue[1].extra,true);g=tryAction(g,{kind:'pass'});assert.equal(turnOf(g).id,u.id);assert.equal(g.fleets.A.extraUsed,true);assert.equal(playReaction(g,'B',g.fleets.B.hand.find(c=>c.timing==='activation').id,0,[],g.fleets.B.units[0].id),g);});
 test('destroyed ships lose future activations and their dice; score uses survivors not HP',()=>{let g=createGame();g.fleets.A.units[0].hp=0;assert.equal(availableDice(g,'A').length,6);g=start(g);assert.equal(g.queue.length,5);assert.equal(victoryPoints(g.fleets.A),5);for(let i=0;i<3;i++){g=finishRound(g);if(g.phase!=='done')g=start(g);}assert.equal(g.phase,'done');assert.equal(g.winner,'B');});
 test('deterministic live AI completes three rounds for 100 seeds without deadlock or illegal states',()=>{for(let seed=0;seed<100;seed++){let g=createGame('test-'+seed),n=0;while(g.phase!=='done'){assert.ok(n++<100,'seed '+seed);const next=aiStep(g);assert.notEqual(next,g,'stuck '+g.phase);g=next;for(const side of ['A','B']){assert.ok(g.fleets[side].units.every(u=>u.hp>=0));assert.equal(new Set(g.fleets[side].dice.map(d=>d.id)).size,g.fleets[side].dice.length);}}assert.equal(g.round,3);assert.ok(['A','B'].includes(g.winner));}});
+test('engine has one live combat chain and no leftover HP-score or special-ability aliases', async () => {
+  const source = await readFile(new URL('../app/fleet-test/engine.mjs', import.meta.url), 'utf8');
+  const harness = await readFile(new URL('../scripts/fleet-balance.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /\bfleetHp\b|\bfleetLosses\b|SHIP_SPECIALS|cheapestSpecial|aiReactionChoice|kind==="special"/);
+  assert.doesNotMatch(harness, /function (pick|choose|ai)/);
+  assert.equal((source.match(/export function\s+aiStep\s*\(/g) || []).length, 1);
+  assert.match(harness, /\baiStep\(/);
+  for (const name of ['tryAction','chooseCards','playReaction','resolveReaction','findPayment','aiActionChoice','aiDraftChoice']) {
+    const definitions = source.match(new RegExp(`export function\\s+${name}\\s*\\(`, 'g')) ?? [];
+    const calls = source.match(new RegExp(`\\b${name}\\s*\\(`, 'g')) ?? [];
+    assert.equal(definitions.length, 1, `${name} must have exactly one definition`);
+    assert.ok(calls.length > definitions.length, `${name} is defined but never reached`);
+  }
+});
+test('tryAction rejects the old special alias and unknown kinds; only ability+index fires', () => {
+  let g = start(createGame());
+  const turn = turnOf(g);
+  const spec = UNIT_TYPES[turn.role].abilities[1];
+  g.fleets[turn.side].dice = Object.entries(spec.cost).flatMap(([type, min], i) => [die(type + i, type, min)]);
+  g.fleets[other(turn.side)].hand = [];
+  const paid = findPayment(availableDice(g, turn.side), spec.cost).map(d => d.id);
+  const targetId = g.fleets[other(turn.side)].units[0].id;
+  assert.equal(tryAction(g, {kind:'special', diceIds:paid, targetId}), g);
+  assert.equal(tryAction(g, {kind:'ability', diceIds:paid, targetId}), g);
+  assert.equal(tryAction(g, {kind:'hit', ability:1, diceIds:paid, targetId}), g);
+  const live = tryAction(g, {kind:'ability', ability:1, diceIds:paid, targetId});
+  assert.notEqual(live, g);
+});
+test('AI choosers feed the live chooseCards/tryAction chain and never emit kind special', () => {
+  let g = createGame('ai-chain');
+  assert.deepEqual(aiDraftChoice(g), [g.fleets.A.hand.find(c => c.timing === 'tactic').id]);
+  g = start(g);
+  let n = 0;
+  while (g.phase !== 'done') {
+    assert.ok(n++ < 100);
+    if (g.phase === 'activate') {
+      const choice = aiActionChoice(g);
+      assert.ok(choice.kind === 'pass' || (choice.kind === 'ability' && [0, 1].includes(choice.ability)));
+    }
+    const next = aiStep(g);
+    assert.notEqual(next, g);
+    g = next;
+  }
+  assert.ok(['A', 'B'].includes(g.winner));
+});

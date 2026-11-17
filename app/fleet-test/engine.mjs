@@ -33,8 +33,6 @@ function face(g) { return 1+Math.floor(random(g)*3); }
 const clone=g=>structuredClone(g);
 export const other=side=>side==="A"?"B":"A";
 export const aliveUnits=f=>f.units.filter(u=>u.hp>0);
-export const fleetHp=f=>f.units.reduce((s,u)=>s+u.hp,0);
-export const fleetLosses=f=>f.units.filter(u=>u.hp<=0).length;
 export const victoryPoints=f=>aliveUnits(f).reduce((s,u)=>s+u.glory,0);
 export const turnOf=g=>g.phase==="activate"?g.queue[g.index]||null:null;
 function msg(g,text) {g.log.unshift(text);g.log=g.log.slice(0,60);}
@@ -114,7 +112,8 @@ function attack(g,side,target,amount) {
 export function tryAction(state,action) {
  const turn=turnOf(state);if(!turn||!action)return state;
  if(action.kind==="pass"){const g=clone(state);msg(g,UNIT_TYPES[turn.role].name+" пропускает ход.");next(g);return g;}
- const field=action.ability??(action.kind==="special"?1:0);if(![0,1].includes(field))return state;
+ if(action.kind!=="ability")return state;
+ const field=action.ability;if(![0,1].includes(field))return state;
  const spec=UNIT_TYPES[turn.role].abilities[field];const dice=payment(state,turn.side,action.diceIds||[],spec.cost);if(!dice)return state;
  if((spec.effect==="hit"||spec.effect==="cover")&&!aliveUnits(state.fleets[other(turn.side)]).some(u=>u.id===action.targetId))return state;
  const g=clone(state);spend(g,turn.side,dice);msg(g,UNIT_TYPES[turn.role].name+": "+spec.name+" ("+costText(spec.cost)+").");
