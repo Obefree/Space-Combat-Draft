@@ -21,7 +21,7 @@ export const CARD_TYPES = [
 export const DEMO_FLOW = [
  {n:1,title:"Значки задают общий бросок",what:"В начале каждого раунда значки живых кораблей определяют бросок в общий пул игрока. Значения 1–3, как в основной игре."},
  {n:2,title:"Одна тактика на раунд",what:"Каждый флот играет одну карту из руки или пропускает. Эффект действует на весь флот. Тактики не являются модулями и не назначаются кораблям."},
- {n:3,title:"Каждый корабль ходит сам",what:"Все живые корабли активируются по инициативе справа налево, даже без тактик. При равной инициативе первым ходит обороняющийся."},
+ {n:3,title:"Каждый корабль ходит сам",what:"Все живые корабли активируются по инициативе слева направо, даже без тактик. При равной инициативе первым ходит обороняющийся."},
  {n:4,title:"Две способности",what:"В свой ход выбери дешёвую способность (обычно сумма 3+ одного типа), сильную (8+ или отдельные суммы типов) либо пропусти. Одна способность завершает активацию."},
  {n:5,title:"Реакции и постоянная цена",what:"Защитная реакция и вторая активация играются в ходе раунда. Усиленное поле тактики может сжечь кубы навсегда. Обычная способность проверяет суммы общего пула и не расходует кубы."},
  {n:6,title:"Ровно три раунда",what:"После третьего раунда сравнивается сумма ★ силы выживших. При равенстве побеждает обороняющийся. Модули развития поля в этом демо не участвуют."},
@@ -33,8 +33,6 @@ function face(g) { return 1+Math.floor(random(g)*3); }
 const clone=g=>structuredClone(g);
 export const other=side=>side==="A"?"B":"A";
 export const aliveUnits=f=>f.units.filter(u=>u.hp>0);
-export const fleetHp=f=>f.units.reduce((s,u)=>s+u.hp,0);
-export const fleetLosses=f=>f.units.filter(u=>u.hp<=0).length;
 export const victoryPoints=f=>aliveUnits(f).reduce((s,u)=>s+u.glory,0);
 export const turnOf=g=>g.phase==="activate"?g.queue[g.index]||null:null;
 function msg(g,text) {g.log.unshift(text);g.log=g.log.slice(0,60);}
@@ -114,7 +112,8 @@ function attack(g,side,target,amount) {
 export function tryAction(state,action) {
  const turn=turnOf(state);if(!turn||!action)return state;
  if(action.kind==="pass"){const g=clone(state);msg(g,UNIT_TYPES[turn.role].name+" пропускает ход.");next(g);return g;}
- const field=action.ability??(action.kind==="special"?1:0);if(![0,1].includes(field))return state;
+ if(action.kind!=="ability")return state;
+ const field=action.ability;if(![0,1].includes(field))return state;
  const spec=UNIT_TYPES[turn.role].abilities[field];if(!canPay(availableDice(state,turn.side),spec.cost))return state;
  if((spec.effect==="hit"||spec.effect==="cover")&&!aliveUnits(state.fleets[other(turn.side)]).some(u=>u.id===action.targetId))return state;
  const g=clone(state);msg(g,UNIT_TYPES[turn.role].name+": "+spec.name+" ("+costText(spec.cost)+").");
