@@ -162,7 +162,18 @@ export function resolveReaction(state) {if(state.phase!=="react")return state;co
 export function findPayment(dice,cost) {
  const selected=[];for(const [type,min] of Object.entries(cost)){let total=0;for(const d of dice.filter(d=>d.type===type).sort((a,b)=>b.value-a.value)){selected.push(d);total+=d.value;if(total>=min)break;}if(total<min)return null;}return selected;
 }
-export function aiDraftChoice(g,side=g.drafting) {return g.fleets[side].hand.filter(c=>c.timing==="tactic").slice(0,1).map(c=>c.id);}
+export function aiDraftChoice(g,side=g.drafting) {
+ // Evaluate only public board and the AI's own hand/pool, never the opponent's sealed choice.
+ const fleet=g.fleets[side],dice=availableDice(g,side);
+ const totals=Object.fromEntries(Object.keys(DIE_SYMBOL).map(type=>[type,dice.filter(d=>d.type===type).reduce((n,d)=>n+d.value,0)]));
+ function score(card){const effect=card.abilities[0],estimated={...totals};
+  if(["attack","defense","tech"].includes(effect.effect))estimated[effect.effect]+=effect.amount*2;
+  if(effect.effect==="mixed"){estimated.attack+=effect.amount;estimated.defense+=effect.amount;}
+  const readiness=aliveUnits(fleet).reduce((n,u)=>n+UNIT_TYPES[u.role].abilities.reduce((s,a,i)=>s+(Object.entries(a.cost).every(([type,value])=>estimated[type]>=value)?(i?4:2):0),0),0);
+  return readiness+(effect.effect==="initiative"?1.5:effect.effect==="attack"?1:0);
+ }
+ return [...fleet.hand].filter(c=>c.timing==="tactic").sort((a,b)=>score(b)-score(a)).slice(0,1).map(c=>c.id);
+}
 export function aiActionChoice(g) {
  const t=turnOf(g);if(!t)return null;const enemies=aliveUnits(g.fleets[other(t.side)]).sort((a,b)=>a.hp-b.hp||b.glory-a.glory);if(!enemies.length)return {kind:"pass"};
  for(const field of [1,0]) {const a=UNIT_TYPES[t.role].abilities[field];const p=findPayment(availableDice(g,t.side),a.cost);if(p)return {kind:"ability",ability:field,diceIds:p.map(d=>d.id),targetId:enemies[0].id};}

@@ -57,10 +57,10 @@ function InitiativeBattlefield({game,turn,targetId,canChooseTarget,onTarget,view
 function OpponentOverview({game,side}) {
  const fleet=game.fleets[side],pool=sortedDice(availableDice(game,side));
  return <section className="ftPanel ftOpponentOverview" aria-label="Рука, сыгранные карты и общий пул противника">
-  <div className="ftPanelHead"><h2>{name(side)} · противник</h2><small>Открытая информация демо · всегда видна</small></div>
+  <div className="ftPanelHead"><h2>{name(side)} · противник</h2><small>Рука скрыта · сыгранные карты открываются</small></div>
   <div className="ftOpponentDice" aria-label="Общий пул кубов противника">{DIE_ORDER.map(type=>{const group=pool.filter(d=>d.type===type);return <div className={"ftOpponentDiceType ft-"+type} key={type}><b>{DIE_NAMES[type]} · Σ {group.reduce((s,d)=>s+d.value,0)}</b><div className="ftDicePicker">{group.map(d=><span className={"ftCube ft-"+type} key={d.id}><DieFace type={type} value={d.value}/></span>)}{!group.length&&<small>Нет кубов</small>}</div></div>;})}</div>
   {game.phase==="draft"&&<p className="ftSecretChoice">{game.tacticChoices[side]?"Противник выбрал карту взакрытую. Раскрытие после обоих выборов.":"Противник ещё выбирает тактику взакрытую."}</p>}
-  <h3>Текущая рука противника · {fleet.hand.length}</h3><div className="ftOpponentHand">{fleet.hand.map(c=><article key={c.id} className="ftOpenTactic"><b>{c.name}</b><small>{c.timing==="tactic"?"Тактика":c.timing==="defense"?"Защитная реакция":"Вторая активация"}</small><AbilityFields abilities={c.abilities}/></article>)}{!fleet.hand.length&&<p>Карт в руке нет.</p>}</div>
+  <h3>Текущая рука противника · {fleet.hand.length} скрытых карт</h3><div className="ftOpponentHand" aria-label={"Скрытая рука: "+fleet.hand.length+" карт"}>{Array.from({length:fleet.hand.length},(_,i)=><div className="ftCardBack" aria-label="Закрытая карта противника" key={i}><span aria-hidden="true">✦</span><b>Карта скрыта</b></div>)}{!fleet.hand.length&&<p>Карт в руке нет.</p>}</div>
   <h3>Сыгранные карты противника · {fleet.played.length}</h3><div className="ftPlayedRow">{fleet.played.map((c,i)=>{const a=CARD_TYPES.find(t=>t.name===c.name)?.abilities[c.field];return <article key={i}><small>Раунд {c.round} · {c.field?"Усиленная":"Базовая"}</small><b>{c.name} — {a?.name}</b><span>{a?.text}</span></article>;})}{!fleet.played.length&&<p>Пока ничего не сыграно.</p>}</div>
  </section>;
 }
