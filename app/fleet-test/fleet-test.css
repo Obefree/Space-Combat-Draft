@@ -228,3 +228,18 @@
   .ftShipSpecial{padding:6px}
   .ftShipSpecialHead{flex-wrap:wrap}
 }
+/* v0.4: reuse the original portrait cards, with own dice and two ability fields. */
+.ftBattlefieldColumn{grid-template-rows:470px 48px 470px}
+.ftBattlefieldSlot .ftShipImage{height:110px;min-height:110px;flex-basis:110px}
+.ftBattlefieldSlot .ftShipText{gap:5px}
+.ftDualAbilities{display:grid;gap:6px;margin-top:auto}
+.ftAbilityField{display:flex;flex-direction:column;gap:3px;padding:8px;border:1px solid #bd975683;border-radius:8px;background:#f0c47c15;min-height:80px}
+.ftAbilityField small{font-size:10px;color:#f2c784}.ftAbilityField strong{font-size:13px}.ftAbilityField span{font-size:12px;line-height:1.3}
+.ftShipDice{display:flex;gap:5px}.ftShipDice>span{border:1px solid #9eabcb;border-radius:5px;padding:3px 6px;background:#293b57;font-size:13px}
+.ftShipDice .ftExhausted{opacity:.4;text-decoration:line-through}.ftShipDice .ftBurned{opacity:.4;color:#ff978e;text-decoration:line-through}
+.ftDicePicker{display:flex;flex-wrap:wrap;gap:7px}.ftDicePicker .ftDie{display:flex;flex-direction:column;align-items:center;min-width:74px;font-size:20px}.ftDie small{font-size:9px}
+.ftRoot .ftPicked{outline:2px solid #f7cd7d;background:#64513e}.ft-attack{color:#ffa99c}.ft-defense{color:#a8dcf0}.ft-tech{color:#dcb5ff}
+.ftTactics{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.ftTactic{padding:10px;border:1px solid #827591;border-radius:10px;background:#19243b}
+.ftTactic h3{margin-top:0}.ftTactic>button,.ftDualActions>button{display:flex;flex-direction:column;gap:5px;text-align:left;width:100%;margin-top:8px;padding:12px}.ftTactic>button small,.ftDualActions small{font-size:10px;color:#f1c985}.ftTactic>button span,.ftDualActions span{font-size:12px;line-height:1.4}
+.ftDualActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.ftDualActions strong{font-size:15px}
+@media(max-width:760px){.ftBattlefieldColumn{grid-template-rows:470px 48px 470px}.ftDualActions{grid-template-columns:1fr}}
