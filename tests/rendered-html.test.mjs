@@ -2,13 +2,25 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
+function assertOrphanFree(source, names) {
+  for (const name of names) {
+    const definitions = source.match(new RegExp(`function\\s+${name}\\s*\\(`, "g")) ?? [];
+    const calls = source.match(new RegExp(`\\b${name}\\s*\\(`, "g")) ?? [];
+    assert.equal(definitions.length, 1, `${name} must have exactly one definition`);
+    assert.ok(
+      calls.length > definitions.length,
+      `${name} is defined but the call chain never reaches it, or callers were left after the definition was deleted`,
+    );
+  }
+}
+
+async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
+    new Request(new URL(path, "http://localhost/"), {
       headers: { accept: "text/html" },
     }),
     {
@@ -60,7 +72,19 @@ test("keeps the space combat rules encoded in source", async () => {
   assert.match(source, /hand: deckA\.slice\(0, BATTLE_HAND_SIZE\)/);
   assert.match(source, /hand: deckB\.slice\(0, BATTLE_HAND_SIZE\)/);
   assert.match(source, /function confirmDeploymentSelection\(state: GameState\): GameState/);
+  assert.match(source, /function chargeActiveCreature\(state: GameState\): GameState/);
+  assert.match(source, /function chooseChargeDice\(/);
   assert.match(source, /function resolveAbility\(/);
+  assertOrphanFree(source, [
+    "chargeActiveCreature",
+    "chooseChargeDice",
+    "confirmDeploymentSelection",
+    "resolveAbility",
+    "advanceActivation",
+    "deployOneCreature",
+    "addDiceToCreature",
+    "findPayment",
+  ]);
   assert.match(source, /findPayment\(actor\.attached, ability\.cost\)/);
   assert.match(source, /creature\.attached, ability\.cost/);
   assert.match(source, /function ChargeRack/);
@@ -138,3 +162,60 @@ test("has generated space art for each symmetric battle card", async () => {
     await access(new URL(`../public/card-art/space/generated/${cardId}.png`, import.meta.url));
   }
 });
+
+test("serves the fleet demo at its direct URL", async () => {
+  const response = await render("/fleet-test");
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
+
+  const html = await response.text();
+  assert.match(html, /Инициативный бой флотов/);
+  assert.match(html, /Линия инициативы — слева направо/);
+  assert.match(html, /ftBattlefieldTop/);
+  assert.match(html, /ftBattlefieldBottom/);
+  assert.match(html, /Одна тактика на этот раунд/);
+  assert.match(html, /Даёт кубы в общий пул/);
+  assert.match(html, /ДЕМО v0.4/);
+  assert.equal((html.match(/ftAbilityField/g) || []).length, 22);
+  assert.match(html, /Текущая рука противника/);
+  assert.match(html, /Сыгранные карты противника/);
+  assert.match(html, /Общий пул кубов противника/);
+  assert.doesNotMatch(html, /за выживание|назначь исполнителей|КОМАНДНЫЕ КАРТЫ/);
+  assert.match(html, /href="\/"/);
+});
+
+test("fleet engine keeps one live action chain without leftover scorers or special aliases", async () => {
+  const engine = await readFile(
+    new URL("../app/fleet-test/engine.mjs", import.meta.url),
+    "utf8",
+  );
+  const page = await readFile(
+    new URL("../app/fleet-test/page.jsx", import.meta.url),
+    "utf8",
+  );
+  const css = await readFile(
+    new URL("../app/fleet-test/fleet-test.css", import.meta.url),
+    "utf8",
+  );
+
+  assertOrphanFree(engine + "\n" + page, [
+    "aiStep",
+    "tryAction",
+    "chooseCards",
+    "playReaction",
+    "resolveReaction",
+    "aiDraftChoice",
+    "aiActionChoice",
+  ]);
+  assert.doesNotMatch(engine, /export const fleetHp/);
+  assert.doesNotMatch(engine, /export const fleetLosses/);
+  assert.doesNotMatch(engine, /kind==="special"/);
+  assert.doesNotMatch(engine, /справа налево/);
+  assert.match(engine, /слева направо/);
+  assert.match(page, /kind:"ability"/);
+  assert.doesNotMatch(page, /kind:"special"/);
+  assert.doesNotMatch(page, /ftQueueRtl/);
+  assert.doesNotMatch(css, /direction:rtl/);
+  assert.match(css, /\.ftBoardStage\{[^}]*overflow:hidden/);
+});
+
