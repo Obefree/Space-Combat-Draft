@@ -170,7 +170,7 @@ test("serves the fleet demo at its direct URL", async () => {
 
   const html = await response.text();
   assert.match(html, /Инициативный бой флотов/);
-  assert.match(html, /Линия инициативы — справа налево/);
+  assert.match(html, /Линия инициативы — слева направо/);
   assert.match(html, /ftBattlefieldTop/);
   assert.match(html, /ftBattlefieldBottom/);
   assert.match(html, /Одна тактика на этот раунд/);
