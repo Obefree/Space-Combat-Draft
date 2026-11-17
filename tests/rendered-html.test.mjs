@@ -174,9 +174,12 @@ test("serves the fleet demo at its direct URL", async () => {
   assert.match(html, /ftBattlefieldTop/);
   assert.match(html, /ftBattlefieldBottom/);
   assert.match(html, /Одна тактика на этот раунд/);
-  assert.match(html, /Собственные кубы корабля/);
+  assert.match(html, /Даёт кубы в общий пул/);
   assert.match(html, /ДЕМО v0.4/);
-  assert.equal((html.match(/ftAbilityField/g) || []).length, 12);
+  assert.equal((html.match(/ftAbilityField/g) || []).length, 22);
+  assert.match(html, /Текущая рука противника/);
+  assert.match(html, /Сыгранные карты противника/);
+  assert.match(html, /Общий пул кубов противника/);
   assert.doesNotMatch(html, /за выживание|назначь исполнителей|КОМАНДНЫЕ КАРТЫ/);
   assert.match(html, /href="\/"/);
 });

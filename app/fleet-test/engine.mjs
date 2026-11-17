@@ -19,11 +19,11 @@ export const CARD_TYPES = [
  {id:"again",name:"Вторая активация",timing:"activation",abilities:[ability("Перехват управления",{},"После текущего хода ещё раз активировать выбранный свой корабль","again",1),ability("Полная готовность",{tech:3},"Сжечь ✦ навсегда; вторая активация и 2 щита флоту","again",2)]},
 ];
 export const DEMO_FLOW = [
- {n:1,title:"Корабли дают кубы",what:"В начале каждого раунда каждый живой корабль бросает свой напечатанный набор. Значения 1–3, как в основной игре."},
+ {n:1,title:"Значки задают общий бросок",what:"В начале каждого раунда значки живых кораблей определяют бросок в общий пул игрока. Значения 1–3, как в основной игре."},
  {n:2,title:"Одна тактика на раунд",what:"Каждый флот играет одну карту из руки или пропускает. Эффект действует на весь флот. Тактики не являются модулями и не назначаются кораблям."},
  {n:3,title:"Каждый корабль ходит сам",what:"Все живые корабли активируются по инициативе справа налево, даже без тактик. При равной инициативе первым ходит обороняющийся."},
  {n:4,title:"Две способности",what:"В свой ход выбери дешёвую способность (обычно сумма 3+ одного типа), сильную (8+ или отдельные суммы типов) либо пропусти. Одна способность завершает активацию."},
- {n:5,title:"Реакции и постоянная цена",what:"Защитная реакция и вторая активация играются в ходе раунда. Усиленное поле тактики может сжечь кубы навсегда. Обычная трата лишь истощает их до следующего раунда."},
+ {n:5,title:"Реакции и постоянная цена",what:"Защитная реакция и вторая активация играются в ходе раунда. Усиленное поле тактики может сжечь кубы навсегда. Обычная способность проверяет суммы общего пула и не расходует кубы."},
  {n:6,title:"Ровно три раунда",what:"После третьего раунда сравнивается сумма ★ силы выживших. При равенстве побеждает обороняющийся. Модули развития поля в этом демо не участвуют."},
 ];
 const ORDER = {A:["scout","destroyer","cruiser"],B:["interceptor","frigate","dreadnought"]};
@@ -55,7 +55,7 @@ export function createGame(seed="battle-01",mode="solo",defender="B") {
  }
  reroll(g);msg(g,"Раунд 1: корабли бросили свои кубы. Каждый флот может сыграть одну тактику.");return g;
 }
-export function availableDice(g,side) {return g.fleets[side].dice.filter(d=>!d.spent && (!d.source || g.fleets[side].units.some(u=>u.id===d.source&&u.hp>0)));}
+export function availableDice(g,side) {return g.fleets[side].dice.filter(d=>!d.spent);}
 export function canPay(dice,cost) {return Object.entries(cost).every(([type,n])=>dice.filter(d=>d.type===type).reduce((s,d)=>s+d.value,0)>=n);}
 function payment(g,side,ids,cost) {
  if(!Array.isArray(ids)||new Set(ids).size!==ids.length)return null;
@@ -115,9 +115,9 @@ export function tryAction(state,action) {
  const turn=turnOf(state);if(!turn||!action)return state;
  if(action.kind==="pass"){const g=clone(state);msg(g,UNIT_TYPES[turn.role].name+" пропускает ход.");next(g);return g;}
  const field=action.ability??(action.kind==="special"?1:0);if(![0,1].includes(field))return state;
- const spec=UNIT_TYPES[turn.role].abilities[field];const dice=payment(state,turn.side,action.diceIds||[],spec.cost);if(!dice)return state;
+ const spec=UNIT_TYPES[turn.role].abilities[field];if(!canPay(availableDice(state,turn.side),spec.cost))return state;
  if((spec.effect==="hit"||spec.effect==="cover")&&!aliveUnits(state.fleets[other(turn.side)]).some(u=>u.id===action.targetId))return state;
- const g=clone(state);spend(g,turn.side,dice);msg(g,UNIT_TYPES[turn.role].name+": "+spec.name+" ("+costText(spec.cost)+").");
+ const g=clone(state);msg(g,UNIT_TYPES[turn.role].name+": "+spec.name+" ("+costText(spec.cost)+").");
  if(spec.effect==="shield"){g.fleets[turn.side].shield+=spec.amount;next(g);}
  else {if(spec.effect==="cover")g.fleets[turn.side].shield+=1;attack(g,turn.side,action.targetId,spec.amount);}
  return g;
