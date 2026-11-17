@@ -162,3 +162,22 @@ test("has generated space art for each symmetric battle card", async () => {
     await access(new URL(`../public/card-art/space/generated/${cardId}.png`, import.meta.url));
   }
 });
+
+test("serves the fleet demo at its direct URL", async () => {
+  const response = await render("/fleet-test");
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
+
+  const html = await response.text();
+  assert.match(html, /Инициативный бой флотов/);
+  assert.match(html, /Линия инициативы — справа налево/);
+  assert.match(html, /ftBattlefieldTop/);
+  assert.match(html, /ftBattlefieldBottom/);
+  assert.match(html, /Одна тактика на этот раунд/);
+  assert.match(html, /Собственные кубы корабля/);
+  assert.match(html, /ДЕМО v0.4/);
+  assert.equal((html.match(/ftAbilityField/g) || []).length, 12);
+  assert.doesNotMatch(html, /за выживание|назначь исполнителей|КОМАНДНЫЕ КАРТЫ/);
+  assert.match(html, /href="\/"/);
+});
+
