@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {createGame,newBattle,aiDraftChoice,chooseCards,turnOf,tryAction,availableDice,UNIT_TYPES,CARD_TYPES,findPayment,canPay,playReaction,resolveReaction,aiStep,victoryPoints,aliveUnits} from '../app/fleet-test/engine.mjs';
+import {createGame,newBattle,aiDraftChoice,aiActionChoice,chooseCards,turnOf,tryAction,availableDice,UNIT_TYPES,CARD_TYPES,canPay,playReaction,resolveReaction,aiStep,victoryPoints,aliveUnits,initiative} from '../app/fleet-test/engine.mjs';
 const start=g=>chooseCards(chooseCards(g,[]),[]);
 const die=(id,type,value,source=null)=>({id,type,value,source,spent:false});
 function finishRound(g){const round=g.round;let n=0;while(g.phase!=='done'&&g.round===round){assert.ok(n++<100);g=g.phase==='react'?resolveReaction(g):tryAction(g,{kind:'pass'});}return g;}
 test('ships roll their own printed dice before any card; no modules, no required tactics',()=>{const g=createGame();for(const side of ['A','B']){assert.equal(g.fleets[side].dice.length,6);for(const u of g.fleets[side].units){assert.deepEqual(g.fleets[side].dice.filter(d=>d.source===u.id).map(d=>d.type),UNIT_TYPES[u.role].dice);}assert.ok(g.fleets[side].dice.every(d=>d.value>=1&&d.value<=3));}const playing=start(g);assert.equal(playing.phase,'activate');assert.equal(playing.queue.length,6);assert.equal(new Set(playing.queue.map(q=>q.id)).size,6);assert.deepEqual(playing.queue.map(q=>q.initiative),[8,7,5,4,3,2]);});
 test('three complete activation rounds without cards; defender wins equal surviving strength',()=>{let g=createGame();let activations=0;for(let round=1;round<=3;round++){g=start(g);assert.equal(g.round,round);while(g.phase==='activate'){activations++;g=tryAction(g,{kind:'pass'});}}assert.equal(activations,18);assert.equal(g.phase,'done');assert.equal(g.result.scoreA,11);assert.equal(g.result.scoreB,11);assert.equal(g.winner,'B');assert.equal(g.result.kind,'defender');let a=createGame('other','hotseat','A');for(let r=0;r<3;r++)a=finishRound(start(a));assert.equal(a.winner,'A');});
-test('every ship has two usable abilities, with cheap single-colour 3 and strong 8 or split 5+5',()=>{for(const [role,spec] of Object.entries(UNIT_TYPES)){assert.equal(spec.abilities.length,2);assert.deepEqual(Object.values(spec.abilities[0].cost),[3]);assert.ok(Object.values(spec.abilities[1].cost).includes(8)||Object.values(spec.abilities[1].cost).every(n=>n===5));for(const field of [0,1]){let g=start(createGame());const side=g.fleets.A.units.some(u=>u.role===role)?'A':'B';const u=g.fleets[side].units.find(u=>u.role===role);g.queue=[{side,id:u.id,role,initiative:u.initiative}];g.index=0;const cost=spec.abilities[field].cost;g.fleets[side].dice=Object.entries(cost).flatMap(([type,min])=>Array.from({length:Math.ceil(min/3)},(_,i)=>die(type+i,type,Math.min(3,min-i*3))));g.fleets[side==='A'?'B':'A'].hand=[];const payment=findPayment(availableDice(g,side),cost);const next=tryAction(g,{kind:'ability',ability:field,diceIds:payment.map(d=>d.id),dieId:payment[0].id,dieType:"attack",targetId:g.fleets[side==='A'?'B':'A'].units[0].id});assert.notEqual(next,g,role+' ability '+field);}}});
+test('every ship has two usable abilities, with cheap single-colour 3 and strong 8 or split 5+5',()=>{for(const [role,spec] of Object.entries(UNIT_TYPES)){assert.equal(spec.abilities.length,2);assert.deepEqual(Object.values(spec.abilities[0].cost),[3]);assert.ok(Object.values(spec.abilities[1].cost).includes(8)||Object.values(spec.abilities[1].cost).every(n=>n===5));for(const field of [0,1]){let g=start(createGame());const side=g.fleets.A.units.some(u=>u.role===role)?'A':'B';const u=g.fleets[side].units.find(u=>u.role===role);g.queue=[{side,id:u.id,role,initiative:u.initiative}];g.index=0;const cost=spec.abilities[field].cost;g.fleets[side].dice=Object.entries(cost).flatMap(([type,min])=>Array.from({length:Math.ceil(min/3)},(_,i)=>die(type+i,type,Math.min(3,min-i*3))));g.fleets[side==='A'?'B':'A'].hand=[];assert.equal(canPay(availableDice(g,side),cost),true);const next=tryAction(g,{kind:'ability',ability:field,dieId:g.fleets[side].dice[0].id,dieType:"attack",targetId:g.fleets[side==='A'?'B':'A'].units[0].id});assert.notEqual(next,g,role+' ability '+field);}}});
 test('colour thresholds are independent; an attack surplus cannot replace defense',()=>{assert.equal(canPay([die('a','attack',10)],{attack:5,defense:5}),false);assert.equal(canPay([die('a','attack',5),die('b','defense',5)],{attack:5,defense:5}),true);});
 test('exactly one tactic per fleet per round; cards never assign commands or take away ship activations',()=>{const g=createGame(),card=g.fleets.A.hand.find(c=>c.type==='assault');const a=chooseCards(g,[card.id]);assert.equal(availableDice(a,'A').length,6);assert.equal(a.fleets.A.played.length,0);assert.equal(a.drafting,'B');assert.equal(chooseCards(g,[card.id,card.id]),g);const playing=chooseCards(a,[]);assert.equal(playing.queue.length,6);assert.equal(availableDice(playing,'A').length,8);assert.equal(chooseCards(playing,[]),playing);for(const c of CARD_TYPES)assert.equal(c.abilities.length,2);});
 test('ordinary ability checks the whole shared pool without selection or spending; explicit burning persists',()=>{let g=start(createGame());const source=g.fleets.A.units[0].id;g.fleets.A.dice.filter(d=>d.source===source).forEach(d=>d.value=3);const ids=g.fleets.A.dice.filter(d=>d.source===source).slice(0,1).map(d=>d.id);g.fleets.B.hand=[];g=tryAction(g,{kind:'ability',ability:0,diceIds:ids,targetId:g.fleets.B.units[0].id});assert.equal(g.fleets.A.dice.find(d=>d.id===ids[0]).spent,false);g=finishRound(g);assert.equal(g.fleets.A.dice.find(d=>d.id===ids[0]).spent,false);
@@ -33,3 +33,32 @@ test('recalibration changes chosen shared-pool die; suppression moves remaining 
 
 test('unknown action kinds including the old special alias do not fire an ability',()=>{let g=start(createGame());g.fleets.A.dice.forEach(d=>d.value=3);g.fleets.B.hand=[];const hp=g.fleets.B.units[0].hp;assert.equal(tryAction(g,{kind:'special',targetId:g.fleets.B.units[0].id}),g);assert.equal(tryAction(g,{kind:'ability',targetId:g.fleets.B.units[0].id}),g);const hit=tryAction(g,{kind:'ability',ability:0,targetId:g.fleets.B.units[0].id});assert.notEqual(hit,g);assert.ok(hit.phase==='react'||hit.fleets.B.units[0].hp<hp);});
 test('a locked pass stores cardId null so the opponent banner is not a hidden card',()=>{const passed=chooseCards(createGame(),[]);assert.equal(passed.phase,'draft');assert.equal(passed.tacticChoices.A.cardId,null);const card=createGame().fleets.A.hand.find(c=>c.timing==='tactic');const sealed=chooseCards(createGame(),[card.id]);assert.equal(sealed.tacticChoices.A.cardId,card.id);});
+test('cover and siege grant personal shields; delayed initiative matches the board helper',()=>{
+  let g=start(createGame());
+  g.index=g.queue.findIndex(q=>q.role==='cruiser');
+  g.fleets.A.dice=[die('a','attack',3)];
+  g=tryAction(g,{kind:'ability',ability:0,targetId:g.fleets.B.units[0].id});
+  assert.equal(g.phase,'react');
+  assert.equal(g.fleets.A.units.find(u=>u.role==='cruiser').shield,2);
+
+  g=start(createGame());
+  g.index=g.queue.findIndex(q=>q.role==='dreadnought');
+  g.fleets.B.dice=[die('a1','attack',3),die('a2','attack',2),die('d1','defense',3),die('d2','defense',2)];
+  const scout=g.fleets.A.units.find(u=>u.role==='scout');
+  g=tryAction(g,{kind:'ability',ability:1,targetId:scout.id});
+  assert.equal(g.phase,'react');
+  assert.equal(g.fleets.B.units.find(u=>u.role==='dreadnought').shield,3);
+  const afterGuard=playReaction(g,'A',g.fleets.A.hand.find(c=>c.timing==='defense').id);
+  assert.equal(afterGuard.fleets.A.units.find(u=>u.role==='scout').hp,scout.hp-2);
+
+  g=start(createGame());
+  g.index=1;
+  g.fleets.B.dice=[die('a1','attack',3),die('a2','attack',3),die('a3','attack',3)];
+  g.fleets.A.hand=[];
+  const destroyer=g.fleets.A.units.find(u=>u.role==='destroyer');
+  const delayed=tryAction(g,{kind:'ability',ability:1,targetId:destroyer.id});
+  const moved=delayed.queue.at(-1);
+  assert.equal(moved.id,destroyer.id);
+  assert.equal(initiative(delayed,'A',delayed.fleets.A.units.find(u=>u.id===destroyer.id)),moved.initiative);
+});
+test('AI delay prefers an enemy that still has an activation this round',()=>{const g=start(createGame());g.index=1;g.fleets.B.dice=[die('a1','attack',3),die('a2','attack',3),die('a3','attack',3)];const choice=aiActionChoice(g);assert.equal(choice.kind,'ability');assert.equal(choice.ability,1);assert.equal(choice.targetId,'A-destroyer');assert.equal(choice.diceIds,undefined);});
