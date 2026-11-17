@@ -21,7 +21,7 @@ export const CARD_TYPES = [
 export const DEMO_FLOW = [
  {n:1,title:"Корабли дают кубы",what:"В начале каждого раунда каждый живой корабль бросает свой напечатанный набор. Значения 1–3, как в основной игре."},
  {n:2,title:"Одна тактика на раунд",what:"Каждый флот играет одну карту из руки или пропускает. Эффект действует на весь флот. Тактики не являются модулями и не назначаются кораблям."},
- {n:3,title:"Каждый корабль ходит сам",what:"Все живые корабли активируются по инициативе справа налево, даже без тактик. При равной инициативе первым ходит обороняющийся."},
+ {n:3,title:"Каждый корабль ходит сам",what:"Все живые корабли активируются по инициативе слева направо, даже без тактик. При равной инициативе первым ходит обороняющийся."},
  {n:4,title:"Две способности",what:"В свой ход выбери дешёвую способность (обычно сумма 3+ одного типа), сильную (8+ или отдельные суммы типов) либо пропусти. Одна способность завершает активацию."},
  {n:5,title:"Реакции и постоянная цена",what:"Защитная реакция и вторая активация играются в ходе раунда. Усиленное поле тактики может сжечь кубы навсегда. Обычная трата лишь истощает их до следующего раунда."},
  {n:6,title:"Ровно три раунда",what:"После третьего раунда сравнивается сумма ★ силы выживших. При равенстве побеждает обороняющийся. Модули развития поля в этом демо не участвуют."},
@@ -33,8 +33,6 @@ function face(g) { return 1+Math.floor(random(g)*3); }
 const clone=g=>structuredClone(g);
 export const other=side=>side==="A"?"B":"A";
 export const aliveUnits=f=>f.units.filter(u=>u.hp>0);
-export const fleetHp=f=>f.units.reduce((s,u)=>s+u.hp,0);
-export const fleetLosses=f=>f.units.filter(u=>u.hp<=0).length;
 export const victoryPoints=f=>aliveUnits(f).reduce((s,u)=>s+u.glory,0);
 export const turnOf=g=>g.phase==="activate"?g.queue[g.index]||null:null;
 function msg(g,text) {g.log.unshift(text);g.log=g.log.slice(0,60);}
@@ -92,11 +90,10 @@ export function chooseCards(state,ids=[],field=0,diceIds=[]) {
  if(side==="A")g.drafting="B";else queueShips(g);return g;
 }
 function finish(g) {
- const a=vote(g,"A"),b=vote(g,"B");g.winner=a===b?g.defender:a>b?"A":"B";g.phase="done";g.pending=null;
+ const a=victoryPoints(g.fleets.A),b=victoryPoints(g.fleets.B);g.winner=a===b?g.defender:a>b?"A":"B";g.phase="done";g.pending=null;
  g.result={scoreA:a,scoreB:b,kind:a===b?"defender":"points",round:3};
  msg(g,"Три раунда завершены. Сила выживших "+a+":"+b+". Победитель: "+g.fleets[g.winner].name+(a===b?" (преимущество обороняющегося)":"")+".");
 }
-const vote=(g,side)=>victoryPoints(g.fleets[side]);
 function advance(g) {
  while(g.index<g.queue.length) {const t=g.queue[g.index];if(g.fleets[t.side].units.some(u=>u.id===t.id&&u.hp>0)){g.phase="activate";return;}g.index++;}
  if(g.round>=3){finish(g);return;}
@@ -114,8 +111,8 @@ function attack(g,side,target,amount) {
 export function tryAction(state,action) {
  const turn=turnOf(state);if(!turn||!action)return state;
  if(action.kind==="pass"){const g=clone(state);msg(g,UNIT_TYPES[turn.role].name+" пропускает ход.");next(g);return g;}
- const field=action.ability??(action.kind==="special"?1:0);if(![0,1].includes(field))return state;
- const spec=UNIT_TYPES[turn.role].abilities[field];const dice=payment(state,turn.side,action.diceIds||[],spec.cost);if(!dice)return state;
+ if(action.kind!=="ability"||![0,1].includes(action.ability))return state;
+ const spec=UNIT_TYPES[turn.role].abilities[action.ability];const dice=payment(state,turn.side,action.diceIds||[],spec.cost);if(!dice)return state;
  if((spec.effect==="hit"||spec.effect==="cover")&&!aliveUnits(state.fleets[other(turn.side)]).some(u=>u.id===action.targetId))return state;
  const g=clone(state);spend(g,turn.side,dice);msg(g,UNIT_TYPES[turn.role].name+": "+spec.name+" ("+costText(spec.cost)+").");
  if(spec.effect==="shield"){g.fleets[turn.side].shield+=spec.amount;next(g);}

@@ -163,17 +163,16 @@
   .ftDemoCards{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
-/* 2026-11-16: fleet battle uses the ORIGINAL two-sided initiative axis.
-   The physical order starts on the RIGHT with the highest initiative. */
+/* Highest initiative is on the LEFT; the axis and queue read left to right. */
 .ftBattlefield{max-width:100%;margin-bottom:13px;overflow:hidden}
 .ftBattlefield .ftPanelHead small{font-size:11px;color:#f3c881}
 .ftBattlefieldMeta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
   margin:0 0 11px;padding:0 4px;font-size:12px;color:#c3c5d8}
 .ftBattlefieldMeta strong{color:#f0c980;font-size:12px}
 .ftBattlefieldScroller{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;
-  padding:8px 2px 16px;direction:rtl;scrollbar-color:#b59c74 #1b2033;
+  padding:8px 2px 16px;direction:ltr;scrollbar-color:#b59c74 #1b2033;
   border-radius:8px}
-.ftBattlefieldLine{display:flex;flex-direction:row;direction:rtl;gap:11px;
+.ftBattlefieldLine{display:flex;flex-direction:row;direction:ltr;gap:11px;
   width:max-content;min-width:100%;align-items:stretch}
 .ftBattlefieldColumn{direction:ltr;display:grid;grid-template-rows:355px 48px 355px;
   flex:0 0 248px;gap:7px;min-width:0}
@@ -209,9 +208,6 @@
 .ftShipEffect{font-size:12px;line-height:1.3;color:#efebea;white-space:normal;overflow-wrap:anywhere}
 .ftShipModule{font-size:10px;color:#aec8de;line-height:1.3;margin-top:auto}
 .ftBattlefieldHint{margin:10px 0 0!important;color:#f5d49b!important;font-size:12px}
-.ftQueueRtl{direction:rtl;justify-content:flex-start}
-.ftQueueRtl .ftQueueChip{direction:ltr;text-align:left}
-.ftTimeline .ftQueueRtl{overflow-x:auto}
 .ftRoot .ftBattlefieldSlot .ftShip:disabled:not(.ftDead){opacity:1;color:#f8f4ed;cursor:default}
 .ftRoot .ftBattlefieldSlot .ftShip.ftDead{opacity:.36;filter:grayscale(1)}
 .ftRoot .ftBattlefieldSlot .ftShip.ftTarget{outline:3px solid #f49a90;outline-offset:-3px}
@@ -247,7 +243,7 @@
 .ftRoot{max-width:1600px}
 .ftScaleTools{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.ftScaleTools label{display:flex;align-items:center;gap:7px;font-size:12px}.ftScaleTools input{width:130px;accent-color:#e7c17a}.ftScaleTools output{min-width:38px;font:700 12px ui-monospace,monospace}.ftScaleTools button{min-height:34px;padding:6px 10px;font-size:12px}.ftScaleTools button[aria-pressed=true]{border-color:#edce8c;background:#4b4238}
 .ftBattlefield:fullscreen{background:#08121f;overflow:auto;border:0;border-radius:0;padding:16px;margin:0;width:100%;height:100%}
-.ftBattlefieldScroller{padding:5px 0 10px}.ftBoardStage{position:relative;margin-inline:auto;flex:none}.ftBattlefieldLine{position:absolute;right:0;top:0;min-width:0;gap:10px;transform-origin:top right}.ftBattlefieldColumn{flex:0 0 214px;grid-template-rows:390px 44px 390px;gap:6px}.ftBattlefieldAxis{min-height:44px;font-size:12px}.ftBattlefieldSlot{border-color:#29435745;background:#0b1c2c30}.ftBattlefieldSlot:not(.ftFilled){background:transparent;border-color:transparent}
+.ftBattlefieldScroller{padding:5px 0 10px}.ftBoardStage{position:relative;margin-inline:auto;flex:none}.ftBattlefieldLine{position:absolute;left:0;top:0;min-width:0;gap:10px;transform-origin:top left}.ftBattlefieldColumn{flex:0 0 214px;grid-template-rows:390px 44px 390px;gap:6px}.ftBattlefieldAxis{min-height:44px;font-size:12px}.ftBattlefieldSlot{border-color:#29435745;background:#0b1c2c30}.ftBattlefieldSlot:not(.ftFilled){background:transparent;border-color:transparent}
 .ftRoot .ftBattlefieldSlot .ftShip{--team:#8bddf4;border:1px solid color-mix(in srgb,var(--team) 50%,#172536);border-radius:7px;background:#091521;box-shadow:0 4px #203447,0 6px #040a13,0 12px 17px #0008;overflow:hidden;display:flex;flex-direction:column;height:390px;padding:0}.ftRoot .ftBattlefieldSlot .ftShipTeamB{--team:#f0a498}
 .ftRoot .ftBattlefieldSlot .ftShipImage{height:120px;min-height:120px;flex-basis:120px}.ftShipImage img{object-position:50% 39%}.ftShipImage:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#06111c38,transparent 30%,#06111c85 62%,#06111cf5);pointer-events:none}
 .ftShipStats{position:absolute;top:6px;left:6px;z-index:1;display:flex;gap:4px}.ftShipStats span{background:#07111ee6;border:1px solid #a3bdd075;border-radius:4px;padding:2px 6px;color:#ffe0a0;font:800 12px ui-monospace,monospace}
@@ -262,8 +258,6 @@
 .ftDiceGroups{display:grid;gap:10px;margin:12px 0}.ftDiceGroup{padding:10px 12px;background:#0c1a2a;border:1px solid #38536b;border-radius:8px}.ftDiceGroup.ft-attack{border-left:3px solid #ffac94}.ftDiceGroup.ft-defense{border-left:3px solid #93e6ff}.ftDiceGroup.ft-tech{border-left:3px solid #d5b5ff}.ftDiceGroupHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}.ftDiceGroupHead strong{font-size:13px}.ftDiceGroupHead small{font:650 11px ui-monospace,monospace}.ftDicePicker{gap:9px;align-items:center}.ftEmptyDice{font-size:12px;color:#8ea5b9}
 .ftTactic{background:linear-gradient(150deg,#172b40,#091521);border:1px solid #5e778b;border-radius:7px;box-shadow:0 4px #203447,0 7px 16px #0006}.ftTactic>button{border-radius:5px;border-color:#506a7d;background:linear-gradient(110deg,#173042,#101d2c)}
 @media(max-width:760px){.ftBattlefieldColumn{flex-basis:214px;grid-template-rows:390px 44px 390px}.ftScaleTools{width:100%}.ftScaleTools input{width:110px}.ftBattlefieldSlot .ftShipImage{height:120px;min-height:120px;flex-basis:120px}}
-/* Highest initiative is on the LEFT. Both the axis and turn queue read left to right. */
-.ftBattlefieldScroller,.ftBattlefieldLine{direction:ltr}.ftBattlefieldLine{right:auto;left:0;transform-origin:top left}.ftQueueRtl{direction:ltr;flex-direction:row}
 .ftRoot .ftTop{gap:12px;margin-bottom:10px}.ftRoot .ftIntro h1{font-size:clamp(22px,2.5vw,31px)}.ftIntro p{font-size:13px;margin-bottom:0}.ftSettings{padding:9px}.ftScore{margin-bottom:9px}.ftScore>div{padding:7px 10px}.ftScore strong{font-size:18px}
 .ftBattlefield{padding:12px;background:linear-gradient(145deg,#0c1b2eea,#0a1525f5),url('/card-art/space/orbital-sector.jpg') center/cover}.ftBattlefield .ftPanelHead h2{font-size:17px}.ftBattlefieldMeta{margin-bottom:4px}.ftRoot .ftBattlefieldSlot .ftShip{cursor:zoom-in}.ftRoot .ftBattlefieldSlot .ftShip.ftTarget{cursor:crosshair}
 .ftInspectDialog{max-width:min(92vw,420px);max-height:90vh;overflow:auto;padding:16px;border:1px solid #86b5cd;border-radius:12px;background:#0b1828;color:#edf5ff;box-shadow:0 24px 90px #000b}.ftInspectDialog::backdrop{background:#020710c9;backdrop-filter:blur(4px)}.ftInspectDialog form{text-align:right}.ftInspectDialog button{cursor:pointer;background:#213951;border:1px solid #9ab1c8;border-radius:5px;color:#eef5ff;padding:7px 12px}.ftInspectDialog img{width:100%;max-height:200px;object-fit:cover;margin-top:10px;border-radius:7px}.ftInspectDialog h2{margin-bottom:4px}.ftInspectDialog .ftAbilityField{padding:12px;min-height:90px}.ftInspectDialog .ftAbilityField strong{font-size:16px}.ftInspectDialog .ftAbilityField span{font-size:14px}

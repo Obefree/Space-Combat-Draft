@@ -14,13 +14,13 @@ function assertOrphanFree(source, names) {
   }
 }
 
-async function render() {
+async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
+    new Request(new URL(path, "http://localhost/"), {
       headers: { accept: "text/html" },
     }),
     {
@@ -179,5 +179,36 @@ test("serves the fleet demo at its direct URL", async () => {
   assert.equal((html.match(/ftAbilityField/g) || []).length, 12);
   assert.doesNotMatch(html, /за выживание|назначь исполнителей|КОМАНДНЫЕ КАРТЫ/);
   assert.match(html, /href="\/"/);
+  assert.doesNotMatch(html, /<h1>Space Combat Draft<\/h1>/);
+});
+
+test("fleet demo has one live action chain and no leftover stubs", async () => {
+  const engine = await readFile(new URL("../app/fleet-test/engine.mjs", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/fleet-test/page.jsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../app/fleet-test/fleet-test.css", import.meta.url), "utf8");
+  const harness = await readFile(new URL("./rendered-html.test.mjs", import.meta.url), "utf8");
+
+  assert.match(harness, /async function render\(path = "\/"\)/);
+  assert.match(harness, /new Request\(new URL\(path, "http:\/\/localhost\/"\)/);
+  assertOrphanFree(engine, [
+    "tryAction",
+    "aiActionChoice",
+    "aiDraftChoice",
+    "findPayment",
+  ]);
+  assertOrphanFree(`${engine}\n${page}`, [
+    "aiStep",
+    "chooseCards",
+    "playReaction",
+    "resolveReaction",
+  ]);
+  assert.doesNotMatch(engine, /fleetHp|fleetLosses/);
+  assert.doesNotMatch(engine, /kind==="special"/);
+  assert.doesNotMatch(engine, /справа налево/);
+  assert.match(engine, /слева направо/);
+  assert.match(page, /kind:"ability"/);
+  assert.doesNotMatch(page, /kind:"special"/);
+  assert.doesNotMatch(page, /ftQueueRtl/);
+  assert.doesNotMatch(css, /direction:\s*rtl/);
 });
 

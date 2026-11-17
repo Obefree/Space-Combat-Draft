@@ -92,6 +92,6 @@ export default function FleetTestPage() {
     </>}
     {error&&<p role="alert" className="ftError">{error}</p>}
    </section>}
-  </div><aside className="ftSidebar"><section className="ftPanel"><h2>Очередь кораблей</h2><div className="ftQueue ftQueueRtl" dir="ltr">{game.queue.slice(game.index).filter(q=>game.fleets[q.side].units.some(u=>u.id===q.id&&u.hp>0)).map((q,i)=><span className={"ftQueueChip"+(i===0?" ftQueueNow":"")} key={q.id+"-"+i}><b>{q.initiative}</b>{UNIT_TYPES[q.role].name}<small>{q.side}{q.extra?" · повтор":""}</small></span>)}</div><p className="ftFine">Каждый корабль — один ход в раунд. Только карта реакции даёт дополнительный ход.</p></section><section className="ftPanel"><h2>Журнал боя</h2><ol className="ftLog">{game.log.map((line,i)=><li key={i}>{line}</li>)}</ol></section></aside></div>
+  </div><aside className="ftSidebar"><section className="ftPanel"><h2>Очередь кораблей</h2><div className="ftQueue">{game.queue.slice(game.index).filter(q=>game.fleets[q.side].units.some(u=>u.id===q.id&&u.hp>0)).map((q,i)=><span className={"ftQueueChip"+(i===0?" ftQueueNow":"")} key={q.id+"-"+i}><b>{q.initiative}</b>{UNIT_TYPES[q.role].name}<small>{q.side}{q.extra?" · повтор":""}</small></span>)}</div><p className="ftFine">Каждый корабль — один ход в раунд. Только карта реакции даёт дополнительный ход.</p></section><section className="ftPanel"><h2>Журнал боя</h2><ol className="ftLog">{game.log.map((line,i)=><li key={i}>{line}</li>)}</ol></section></aside></div>
  </main>;
 }
