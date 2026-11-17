@@ -14,13 +14,13 @@ function assertOrphanFree(source, names) {
   }
 }
 
-async function render() {
+async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
+    new Request(new URL(path, "http://localhost/"), {
       headers: { accept: "text/html" },
     }),
     {
@@ -182,5 +182,40 @@ test("serves the fleet demo at its direct URL", async () => {
   assert.match(html, /Общий пул кубов противника/);
   assert.doesNotMatch(html, /за выживание|назначь исполнителей|КОМАНДНЫЕ КАРТЫ/);
   assert.match(html, /href="\/"/);
+});
+
+test("fleet engine keeps one live action chain without leftover scorers or special aliases", async () => {
+  const engine = await readFile(
+    new URL("../app/fleet-test/engine.mjs", import.meta.url),
+    "utf8",
+  );
+  const page = await readFile(
+    new URL("../app/fleet-test/page.jsx", import.meta.url),
+    "utf8",
+  );
+  const css = await readFile(
+    new URL("../app/fleet-test/fleet-test.css", import.meta.url),
+    "utf8",
+  );
+
+  assertOrphanFree(engine + "\n" + page, [
+    "aiStep",
+    "tryAction",
+    "chooseCards",
+    "playReaction",
+    "resolveReaction",
+    "aiDraftChoice",
+    "aiActionChoice",
+  ]);
+  assert.doesNotMatch(engine, /export const fleetHp/);
+  assert.doesNotMatch(engine, /export const fleetLosses/);
+  assert.doesNotMatch(engine, /kind==="special"/);
+  assert.doesNotMatch(engine, /справа налево/);
+  assert.match(engine, /слева направо/);
+  assert.match(page, /kind:"ability"/);
+  assert.doesNotMatch(page, /kind:"special"/);
+  assert.doesNotMatch(page, /ftQueueRtl/);
+  assert.doesNotMatch(css, /direction:rtl/);
+  assert.match(css, /\.ftBoardStage\{[^}]*overflow:hidden/);
 });
 

@@ -8,7 +8,7 @@ const DIE_ORDER = ["attack", "defense", "tech"];
 const DIE_NAMES = {attack:"Атака",defense:"Защита",tech:"Технологии"};
 function sortedDice(dice) {return [...dice].sort((a,b)=>DIE_ORDER.indexOf(a.type)-DIE_ORDER.indexOf(b.type)||b.value-a.value||a.id.localeCompare(b.id));}
 function DieFace({type,value}) {return <span className="ftDieFace"><i>{DIE_SYMBOL[type]}</i><b>{value}</b></span>;}
-function Ship({unit,side,current,target,queued,acted,dice,onClick,canTarget,onInspect}) {
+function Ship({unit,side,current,target,queued,acted,onClick,canTarget,onInspect}) {
  const data=UNIT_TYPES[unit.role];
 
  return <button type="button" onClick={()=>canTarget&&unit.hp>0?onClick():onInspect(unit)} aria-label={data.name+", инициатива "+unit.initiative+(canTarget?", выбрать целью":", открыть карточку")} className={"ftShip ftShipTeam"+side+(unit.hp<=0?" ftDead":"")+(current?" ftCurrent":"")+(target?" ftTarget":"")}>
@@ -35,7 +35,7 @@ function InitiativeBattlefield({game,turn,targetId,canChooseTarget,onTarget,view
  },[boardWidth]);
  const scale=autoFit?fitScale:manualScale;
  async function fullscreen(){try{if(document.fullscreenElement===sectionRef.current)await document.exitFullscreen();else await sectionRef.current.requestFullscreen();setFullError("");}catch{setFullError("Полноэкранный режим недоступен. Используй ползунок масштаба.");}}
- function renderShip({side,unit}) {return <Ship unit={unit} side={side} current={turn?.id===unit.id} target={targetId===unit.id&&turn?.side!==side} queued={game.queue.slice(game.index).some(q=>q.id===unit.id)} dice={game.fleets[side].dice.filter(d=>d.source===unit.id)} acted={!game.queue.slice(game.index).some(q=>q.id===unit.id)&&game.phase!=="draft"} canTarget={canChooseTarget&&turn?.side!==side} onClick={()=>onTarget(unit.id)} onInspect={setInspected}/>;}
+ function renderShip({side,unit}) {return <Ship unit={unit} side={side} current={turn?.id===unit.id} target={targetId===unit.id&&turn?.side!==side} queued={game.queue.slice(game.index).some(q=>q.id===unit.id)} acted={!game.queue.slice(game.index).some(q=>q.id===unit.id)&&game.phase!=="draft"} canTarget={canChooseTarget&&turn?.side!==side} onClick={()=>onTarget(unit.id)} onInspect={setInspected}/>;}
  return <section ref={sectionRef} className="ftPanel ftBattlefield" aria-label="Поле боя: очередь слева направо" data-player-side={viewSide}>
   <div className="ftPanelHead"><div><small>ПРОТИВНИК СВЕРХУ · ВАШ ФЛОТ СНИЗУ</small><h2>Линия инициативы — слева направо</h2></div><div className="ftScaleTools"><button aria-pressed={autoFit} onClick={()=>setAutoFit(true)}>Вписать в экран</button><label>Масштаб <input aria-label="Масштаб поля боя" type="range" min="12" max="125" step="1" value={Math.round(scale*100)} onChange={e=>{setAutoFit(false);setManualScale(Number(e.target.value)/100);}}/><output>{Math.round(scale*100)}%</output></label><button onClick={fullscreen}>Полный экран</button></div></div>
   <div className="ftBattlefieldMeta"><span>↑ Противник · {name(other(viewSide))}</span><strong>Высокая инициатива слева → ход направо</strong><span>↓ Ваш флот · {name(viewSide)}</span></div>
@@ -103,6 +103,6 @@ export default function FleetTestPage() {
     </>}
     {error&&<p role="alert" className="ftError">{error}</p>}
    </section>}
-  </div><aside className="ftSidebar"><section className="ftPanel"><h2>Очередь кораблей</h2><div className="ftQueue ftQueueRtl" dir="ltr">{game.queue.slice(game.index).filter(q=>game.fleets[q.side].units.some(u=>u.id===q.id&&u.hp>0)).map((q,i)=><span className={"ftQueueChip"+(i===0?" ftQueueNow":"")} key={q.id+"-"+i}><b>{q.initiative}</b>{UNIT_TYPES[q.role].name}<small>{q.side}{q.extra?" · повтор":""}</small></span>)}</div><p className="ftFine">Каждый корабль — один ход в раунд. Только карта реакции даёт дополнительный ход.</p></section><section className="ftPanel"><h2>Журнал боя</h2><ol className="ftLog">{game.log.map((line,i)=><li key={i}>{line}</li>)}</ol></section></aside></div>
+  </div><aside className="ftSidebar"><section className="ftPanel"><h2>Очередь кораблей</h2><div className="ftQueue" dir="ltr">{game.queue.slice(game.index).filter(q=>game.fleets[q.side].units.some(u=>u.id===q.id&&u.hp>0)).map((q,i)=><span className={"ftQueueChip"+(i===0?" ftQueueNow":"")} key={q.id+"-"+i}><b>{q.initiative}</b>{UNIT_TYPES[q.role].name}<small>{q.side}{q.extra?" · повтор":""}</small></span>)}</div><p className="ftFine">Каждый корабль — один ход в раунд. Только карта реакции даёт дополнительный ход.</p></section><section className="ftPanel"><h2>Журнал боя</h2><ol className="ftLog">{game.log.map((line,i)=><li key={i}>{line}</li>)}</ol></section></aside></div>
  </main>;
 }
