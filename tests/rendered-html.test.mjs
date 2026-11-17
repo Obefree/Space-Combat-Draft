@@ -180,6 +180,8 @@ test("serves the fleet demo at its direct URL", async () => {
   assert.match(html, /Текущая рука противника/);
   assert.match(html, /Сыгранные карты противника/);
   assert.match(html, /Общий пул кубов противника/);
+  assert.match(html, /ftAbilityReady/);
+  assert.doesNotMatch(html, /Полный экран/);
   assert.doesNotMatch(html, /за выживание|назначь исполнителей|КОМАНДНЫЕ КАРТЫ/);
   assert.match(html, /href="\/"/);
 });
