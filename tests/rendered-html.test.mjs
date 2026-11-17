@@ -180,7 +180,7 @@ test("serves the fleet demo at its direct URL", async () => {
   assert.match(html, /ДЕМО v0.4/);
   assert.equal((html.match(/ftAbilityField/g) || []).length, 12);
   assert.match(html, /Текущая рука противника/);
-  assert.equal((html.match(/class="ftCardBack"/g) || []).length, 5);
+  assert.equal((html.match(/class="ftCardBack"/g) || []).length, 7);
   const opponentHand = html.slice(html.indexOf('Текущая рука противника'), html.indexOf('Сыгранные карты противника'));
   assert.doesNotMatch(opponentHand, /Боевой натиск|Подкрепление|Ускорение флота|Защитная реакция|Вторая активация|ftAbilityField/);
   assert.match(html, /Сыгранные карты противника/);
