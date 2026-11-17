@@ -11,7 +11,7 @@ function DieFace({type,value}) {return <span className="ftDieFace"><i>{DIE_SYMBO
 function Ship({unit,side,current,target,queued,acted,pool,onClick,canTarget,onInspect,canUse,onUse,armed,displayInitiative}) {
  const data=UNIT_TYPES[unit.role];
 
- return <article onClick={canTarget&&unit.hp>0?onClick:undefined} aria-label={data.name+", инициатива "+unit.initiative} className={"ftShip ftShipTeam"+side+(unit.hp<=0?" ftDead":"")+(current?" ftCurrent":"")+(target?" ftTarget":"")+(canTarget&&armed!==null?" ftAimTarget":"")}>
+ return <article onClick={canTarget&&unit.hp>0?onClick:undefined} aria-label={data.name+", инициатива "+displayInitiative} className={"ftShip ftShipTeam"+side+(unit.hp<=0?" ftDead":"")+(current?" ftCurrent":"")+(target?" ftTarget":"")+(canTarget&&armed!==null?" ftAimTarget":"")}>
   <button type="button" className="ftShipImage" onClick={e=>{e.stopPropagation();if(canTarget&&unit.hp>0)onClick();else onInspect(unit);}} aria-label={data.name+(canTarget?", выбрать целью":", открыть карточку")}><img src={data.art} alt="" loading="lazy"/><div className="ftShipStats"><span>⚡ {displayInitiative}</span><span>★ {unit.glory}</span></div><div className="ftShipPortraitTitle"><b>{data.name}</b><small>{name(side)}</small></div><div className="ftPortraitHp"><i style={{width:100*unit.hp/unit.maxHp+"%"}}/><span>{unit.hp}/{unit.maxHp} HP · 🛡{unit.shield||0}</span></div></button>
   <div className="ftShipText">
    <div className="ftShipDice" aria-label="Даёт кубы в общий пул">{DIE_ORDER.filter(type=>data.dice.includes(type)).map(type=><span className={"ftPoolContribution ft-"+type} key={type} title={DIE_NAMES[type]+": бросить в общий пул"}>{DIE_SYMBOL[type]} ×{data.dice.filter(t=>t===type).length}</span>)}</div>
@@ -34,6 +34,8 @@ function InitiativeBattlefield({game,turn,targetId,canChooseTarget,onTarget,view
   return ()=>{observer.disconnect();window.removeEventListener("resize",measure);};
  },[boardWidth]);
  const scale=autoFit?fitScale:manualScale;
+ const inspectedSide=inspected?(game.fleets.A.units.some(u=>u.id===inspected.id)?"A":"B"):null;
+ const liveInspected=inspectedSide?game.fleets[inspectedSide].units.find(u=>u.id===inspected.id)||inspected:null;
  function renderShip({side,unit}) {return <Ship unit={unit} side={side} displayInitiative={initiative(game,side,unit)} current={turn?.id===unit.id} target={targetId===unit.id&&turn?.side!==side} queued={game.queue.slice(game.index).some(q=>q.id===unit.id)} pool={availableDice(game,side)} canUse={canChooseTarget&&turn?.id===unit.id} onUse={onAbility} armed={armedAbility} acted={!game.queue.slice(game.index).some(q=>q.id===unit.id)&&game.phase!=="draft"} canTarget={canChooseTarget&&turn?.side!==side} onClick={()=>onTarget(unit.id)} onInspect={setInspected}/>;}
  return <section className="ftPanel ftBattlefield" aria-label="Поле боя: очередь слева направо" data-player-side={viewSide}>
   <div className="ftPanelHead"><div><small>ПРОТИВНИК СВЕРХУ · ВАШ ФЛОТ СНИЗУ</small><h2>Линия инициативы — слева направо</h2></div><div className="ftScaleTools"><button aria-pressed={autoFit} onClick={()=>setAutoFit(true)}>Вписать в экран</button><label>Масштаб <input aria-label="Масштаб поля боя" type="range" min="12" max="125" step="1" value={Math.round(scale*100)} onChange={e=>{setAutoFit(false);setManualScale(Number(e.target.value)/100);}}/><output>{Math.round(scale*100)}%</output></label></div></div>
@@ -50,7 +52,7 @@ function InitiativeBattlefield({game,turn,targetId,canChooseTarget,onTarget,view
     </div>)}
    </div></div>
   </div>
-  {inspected&&<dialog ref={dialogRef} className="ftInspectDialog" onClose={()=>setInspected(null)} aria-label={"Карточка: "+UNIT_TYPES[inspected.role].name}><form method="dialog"><button autoFocus aria-label="Закрыть карточку">Закрыть ×</button></form><img src={UNIT_TYPES[inspected.role].art} alt=""/><h2>{UNIT_TYPES[inspected.role].name}</h2><p>⚡ {inspected.initiative} · ★ {inspected.glory} · {inspected.hp}/{inspected.maxHp} HP</p><AbilityFields abilities={UNIT_TYPES[inspected.role].abilities} pool={availableDice(game,game.fleets.A.units.some(u=>u.id===inspected.id)?"A":"B")} canUse={canChooseTarget&&turn?.id===inspected.id} armed={armedAbility} onUse={field=>{dialogRef.current?.close();setInspected(null);onAbility(field);}}/></dialog>}
+  {liveInspected&&<dialog ref={dialogRef} className="ftInspectDialog" onClose={()=>setInspected(null)} aria-label={"Карточка: "+UNIT_TYPES[liveInspected.role].name}><form method="dialog"><button autoFocus aria-label="Закрыть карточку">Закрыть ×</button></form><img src={UNIT_TYPES[liveInspected.role].art} alt=""/><h2>{UNIT_TYPES[liveInspected.role].name}</h2><p>⚡ {initiative(game,inspectedSide,liveInspected)} · ★ {liveInspected.glory} · {liveInspected.hp}/{liveInspected.maxHp} HP · 🛡 {liveInspected.shield||0}</p><AbilityFields abilities={UNIT_TYPES[liveInspected.role].abilities} pool={availableDice(game,inspectedSide)} canUse={canChooseTarget&&turn?.id===liveInspected.id} armed={armedAbility} onUse={field=>{dialogRef.current?.close();setInspected(null);onAbility(field);}}/></dialog>}
   {canChooseTarget&&<p className="ftBattlefieldHint">Нажми подсвеченную способность активного корабля. Для атаки затем выбери корабль противника сверху. Кубы не нужно перетаскивать или распределять.</p>}
  </section>;
 }
