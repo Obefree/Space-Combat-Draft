@@ -14,13 +14,13 @@ function assertOrphanFree(source, names) {
   }
 }
 
-async function render() {
+async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
+    new Request(new URL(path, "http://localhost/"), {
       headers: { accept: "text/html" },
     }),
     {
@@ -189,5 +189,34 @@ test("serves the fleet demo at its direct URL", async () => {
   assert.doesNotMatch(html, /Полный экран/);
   assert.doesNotMatch(html, /за выживание|назначь исполнителей|КОМАНДНЫЕ КАРТЫ/);
   assert.match(html, /href="\/"/);
+  assert.match(html, /Противник ещё выбирает тактику взакрытую/);
+  assert.doesNotMatch(html, /Противник выбрал карту взакрытую/);
+});
+
+test("fleet demo keeps one live executor and drops parallel leftovers", async () => {
+  const engine = await readFile(new URL("../app/fleet-test/engine.mjs", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/fleet-test/page.jsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../app/fleet-test/fleet-test.css", import.meta.url), "utf8");
+  const helper = await readFile(new URL("./rendered-html.test.mjs", import.meta.url), "utf8");
+
+  assert.match(helper, /async function render\(path = "\/"\)/);
+  assertOrphanFree(engine, [
+    "tryAction",
+    "chooseCards",
+    "aiDraftChoice",
+    "aiActionChoice",
+    "findPayment",
+    "playReaction",
+    "resolveReaction",
+  ]);
+  assertOrphanFree(`${engine}\n${page}`, ["aiStep"]);
+  assert.doesNotMatch(engine, /export const fleetHp/);
+  assert.doesNotMatch(engine, /export const fleetLosses/);
+  assert.doesNotMatch(engine, /kind==="special"/);
+  assert.match(engine, /action\.kind!=="ability"/);
+  assert.match(page, /tacticChoices\[side\]\.cardId/);
+  assert.doesNotMatch(page, /ftQueueRtl/);
+  assert.doesNotMatch(css, /ftQueueRtl/);
+  assert.match(css, /\.ftBoardStage\{[^}]*overflow:hidden/);
 });
 
