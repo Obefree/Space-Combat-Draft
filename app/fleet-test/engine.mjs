@@ -46,6 +46,7 @@ export const turnOf=g=>g.phase==="activate"?g.queue[g.index]||null:null;
 function msg(g,text) {g.log.unshift(text);g.log=g.log.slice(0,60);}
 export function initiative(g,side,u) {return u.initiative+(u.roundInitiative||0)+g.fleets[side].initiativeBonus;}
 function reroll(g) {
+ g.lastHit=null;g.pending=null;
  for(const side of ["A","B"]) {
   const f=g.fleets[side];for(const u of f.units){u.shield=0;u.roundInitiative=0;} f.shield=0;f.initiativeBonus=0;f.extraUsed=false;
   // Ship dice have stable identities, so a burned die cannot reappear next round.
@@ -123,13 +124,42 @@ function advance(g) {
  msg(g,"Раунд "+g.round+": живые корабли заново бросили свои кубы. Сожжённые кубы не возвращаются.");
 }
 function next(g) {g.index++;advance(g);}
-function damage(g,p) {const u=g.fleets[p.defender].units.find(u=>u.id===p.target&&u.hp>0);if(u){const n=Math.min(u.hp,p.damage);u.hp-=n;g.lastHit={name:UNIT_TYPES[u.role].name,damage:n,hp:u.hp,maxHp:u.maxHp};msg(g,UNIT_TYPES[u.role].name+": −"+n+" HP"+(u.hp<=0?", уничтожен":"")+".");}}
+// Resolve exactly one hit. Reaction absorption happens before persistent shields.
+function resolveDamage(g,hit,reactionAmount=0) {
+ if(!hit||!["A","B"].includes(hit.attacker)||hit.defender!==other(hit.attacker))return false;
+ const fleet=g.fleets[hit.defender],unit=fleet.units.find(u=>u.id===hit.target&&u.hp>0);
+ if(!unit||!Number.isFinite(hit.damage)||hit.damage<0)return false;
+ const incoming=Math.floor(hit.damage);
+ const reactionBlocked=Math.min(incoming,Math.max(0,Math.floor(reactionAmount)));
+ let remaining=incoming-reactionBlocked;
+ const personalBlocked=Math.min(unit.shield||0,remaining);
+ unit.shield=(unit.shield||0)-personalBlocked;remaining-=personalBlocked;
+ const fleetBlocked=Math.min(fleet.shield||0,remaining);
+ fleet.shield=(fleet.shield||0)-fleetBlocked;remaining-=fleetBlocked;
+ const actual=Math.min(unit.hp,remaining);
+ unit.hp-=actual;
+ g.lastHit={attacker:hit.attacker,defender:hit.defender,target:unit.id,name:UNIT_TYPES[unit.role].name,
+   incoming,reactionBlocked,personalBlocked,fleetBlocked,damage:actual,hp:unit.hp,maxHp:unit.maxHp};
+ msg(g,g.fleets[hit.attacker].name+" → "+fleet.name+", "+UNIT_TYPES[unit.role].name+
+   ": входящий "+incoming+"; реакция −"+reactionBlocked+"; личный щит −"+personalBlocked+
+   "; щит флота −"+fleetBlocked+"; HP −"+actual+(unit.hp===0?" (уничтожен)":"")+".");
+ return true;
+}
 function attack(g,side,target,amount) {
- g.lastHit=null;const defender=other(side),f=g.fleets[defender],unit=f.units.find(u=>u.id===target);const personal=Math.min(unit.shield||0,amount);unit.shield=(unit.shield||0)-personal;const fleetBlock=Math.min(f.shield,amount-personal);f.shield-=fleetBlock;const blocked=personal+fleetBlock;
- const hit={attacker:side,defender,target,damage:amount-blocked};
- msg(g,"Атака: "+amount+" урона; личный щит поглотил "+personal+", щит флота "+fleetBlock+".");
- const reaction=f.hand.some(c=>c.timing==="defense");
- if(hit.damage>0&&reaction){msg(g,"Ожидается защитная реакция противника: "+hit.damage+" урона до реакции.");g.pending=hit;g.phase="react";}else{damage(g,hit);next(g);}
+ if(!["A","B"].includes(side)||!Number.isFinite(amount)||amount<0)return false;
+ const defender=other(side),f=g.fleets[defender],unit=aliveUnits(f).find(u=>u.id===target);
+ if(!unit)return false; // Friendly fire and dead targets are illegal.
+ g.lastHit=null;
+ const hit={attacker:side,defender,target,damage:Math.floor(amount)};
+ const uncovered=Math.max(0,hit.damage-(unit.shield||0)-(f.shield||0));
+ if(uncovered>0&&f.hand.some(c=>c.timing==="defense")){
+  g.pending=hit;g.phase="react";
+  msg(g,g.fleets[side].name+" → "+f.name+", "+UNIT_TYPES[unit.role].name+
+    ": входящий "+hit.damage+"; ожидается защитная реакция (личный щит "+
+    (unit.shield||0)+", щит флота "+(f.shield||0)+").");
+ }else resolveDamage(g,hit);
+ if(g.phase!=="react")next(g);
+ return true;
 }
 export function tryAction(state,action) {
  const turn=turnOf(state);if(!turn||!action)return state;
@@ -152,7 +182,7 @@ export function tryAction(state,action) {
   if(spec.effect==="delay"){
    const idx=g.queue.findIndex((q,i)=>i>g.index&&q.id===action.targetId);if(idx>=0){const [delayed]=g.queue.splice(idx,1);const unit=g.fleets[other(turn.side)].units.find(u=>u.id===action.targetId);const lastInitiative=Math.min(delayed.initiative,...g.queue.slice(g.index+1).map(q=>q.initiative))-1;unit.roundInitiative=lastInitiative-unit.initiative-g.fleets[other(turn.side)].initiativeBonus;delayed.initiative=lastInitiative;g.queue.push(delayed);msg(g,"Подавление: цель перенесена в конец очереди раунда.");}
   }
-  attack(g,turn.side,action.targetId,spec.amount);
+  if(!attack(g,turn.side,action.targetId,spec.amount))return state;
  }
  return g;
 }
@@ -162,18 +192,18 @@ export function playReaction(state,side,cardId,field=0,diceIds=[],targetId=null)
  if(card.timing==="defense") {
   if(state.phase!=="react"||state.pending?.defender!==side)return state;
   const g=clone(state),effect=useCard(g,side,card,field,diceIds);if(!effect)return state;
-  const blocked=Math.min(g.pending.damage,effect.amount);g.pending.damage=Math.max(0,g.pending.damage-effect.amount);msg(g,"Защитная реакция поглотила "+blocked+" урона.");damage(g,g.pending);g.pending=null;next(g);return g;
+  if(!resolveDamage(g,g.pending,effect.amount))return state;g.pending=null;next(g);return g;
  }
  if(card.timing==="activation") {
   if(state.phase!=="activate"||turnOf(state)?.side!==side||state.fleets[side].extraUsed)return state;
   const u=aliveUnits(state.fleets[side]).find(u=>u.id===targetId);if(!u)return state;
   const g=clone(state),effect=useCard(g,side,card,field,diceIds);if(!effect)return state;
-  g.fleets[side].extraUsed=true;if(field===1)g.fleets[side].shield+=2;
+  g.fleets[side].extraUsed=true;if(field===1)g.fleets[side].shield=Math.min(7,g.fleets[side].shield+2);
   g.queue.splice(g.index+1,0,{side,id:u.id,role:u.role,initiative:initiative(g,side,u),extra:true});return g;
  }
  return state;
 }
-export function resolveReaction(state) {if(state.phase!=="react")return state;const g=clone(state);damage(g,g.pending);g.pending=null;next(g);return g;}
+export function resolveReaction(state) {if(state.phase!=="react")return state;const g=clone(state);if(!resolveDamage(g,g.pending))return state;g.pending=null;next(g);return g;}
 export function findPayment(dice,cost) {
  const selected=[];for(const [type,min] of Object.entries(cost)){let total=0;for(const d of dice.filter(d=>d.type===type).sort((a,b)=>b.value-a.value)){selected.push(d);total+=d.value;if(total>=min)break;}if(total<min)return null;}return selected;
 }
