@@ -33,3 +33,72 @@ test('recalibration changes chosen shared-pool die; suppression moves remaining 
 
 test('unknown action kinds including the old special alias do not fire an ability',()=>{let g=start(createGame());g.fleets.A.dice.forEach(d=>d.value=3);g.fleets.B.hand=[];const hp=g.fleets.B.units[0].hp;assert.equal(tryAction(g,{kind:'special',targetId:g.fleets.B.units[0].id}),g);assert.equal(tryAction(g,{kind:'ability',targetId:g.fleets.B.units[0].id}),g);const hit=tryAction(g,{kind:'ability',ability:0,targetId:g.fleets.B.units[0].id});assert.notEqual(hit,g);assert.ok(hit.phase==='react'||hit.fleets.B.units[0].hp<hp);});
 test('a locked pass stores cardId null so the opponent banner is not a hidden card',()=>{const passed=chooseCards(createGame(),[]);assert.equal(passed.phase,'draft');assert.equal(passed.tacticChoices.A.cardId,null);const card=createGame().fleets.A.hand.find(c=>c.timing==='tactic');const sealed=chooseCards(createGame(),[card.id]);assert.equal(sealed.tacticChoices.A.cardId,card.id);});
+
+
+test('damage resolves reaction before shields; a strong guard preserves unused personal shield',()=>{
+ let g=start(createGame());
+ g.queue=[{side:'A',id:'A-destroyer',role:'destroyer',initiative:5},{side:'B',id:'B-frigate',role:'frigate',initiative:4}];
+ g.fleets.A.dice=[die('a1','attack',3),die('a2','attack',3),die('a3','attack',3)];
+ g.fleets.B.dice=[die('b1','defense',3)];g.fleets.B.units[0].shield=4;
+ const original=structuredClone(g.fleets.B.units[0]);
+ const pending=tryAction(g,{kind:'ability',ability:1,targetId:original.id});
+ assert.equal(pending.phase,'react');
+ assert.equal(pending.pending.damage,6,'pending holds the original incoming damage');
+ assert.equal(pending.fleets.B.units[0].shield,4,'shield is not consumed before a reaction');
+ assert.equal(pending.fleets.B.units[0].hp,original.hp);
+ const guard=pending.fleets.B.hand.find(c=>c.timing==='defense');
+ const resolved=playReaction(pending,'B',guard.id,1,['b1']);
+ assert.equal(resolved.fleets.B.units[0].hp,original.hp);
+ assert.equal(resolved.fleets.B.units[0].shield,3,'reaction blocks 5, only 1 shield used');
+ assert.deepEqual([resolved.lastHit.incoming,resolved.lastHit.reactionBlocked,resolved.lastHit.personalBlocked,resolved.lastHit.fleetBlocked,resolved.lastHit.damage],[6,5,1,0,0]);
+ assert.equal(resolved.lastHit.attacker,'A');assert.equal(resolved.lastHit.defender,'B');
+ assert.ok(resolved.log.some(line=>line.includes('Лига Ориона → Гегемония')&&line.includes('HP −0')));
+ assert.equal(resolveReaction(resolved),resolved,'resolved hit cannot be applied twice');
+});
+
+test('all attacks are enemy-only, for either side, even if player supplies a friendly target ID',()=>{
+ for(const side of ['A','B']){
+  let g=start(createGame());
+  const role=side==='A'?'destroyer':'dreadnought';
+  const actor=g.fleets[side].units.find(u=>u.role===role);
+  g.queue=[{side,id:actor.id,role,initiative:actor.initiative},{side:other(side),id:g.fleets[other(side)].units[0].id,role:g.fleets[other(side)].units[0].role,initiative:1}];
+  g.index=0;g.fleets[side].dice=[die('shot','attack',3)];
+  const friendly=g.fleets[side].units.find(u=>u.hp>0);
+  assert.equal(tryAction(g,{kind:'ability',ability:0,targetId:friendly.id}),g,'no action or self-hit on friendly ID');
+  assert.equal(g.fleets[side].units.find(u=>u.id===friendly.id).hp,friendly.hp);
+  const enemy=g.fleets[other(side)].units[0];
+  g.fleets[other(side)].hand=[];
+  const shot=tryAction(g,{kind:'ability',ability:0,targetId:enemy.id});
+  assert.notEqual(shot,g);
+  assert.deepEqual(shot.fleets[side].units.map(u=>u.hp),g.fleets[side].units.map(u=>u.hp),'attacking fleet never loses HP');
+  assert.equal(shot.fleets[other(side)].units[0].hp,enemy.hp-(side==='A'?2:3));
+  assert.equal(shot.lastHit.defender,other(side));
+  assert.equal(shot.lastHit.target,enemy.id);
+ }
+});
+
+test('personal and fleet shields absorb only leftover incoming damage; HP and shield stay bounded',()=>{
+ let g=start(createGame());
+ g.queue=[{side:'A',id:'A-destroyer',role:'destroyer',initiative:5},{side:'B',id:'B-frigate',role:'frigate',initiative:4}];
+ g.fleets.A.dice=[die('a1','attack',3),die('a2','attack',3),die('a3','attack',3)];
+ g.fleets.B.hand=[];g.fleets.B.units[0].shield=2;g.fleets.B.shield=3;
+ const before=g.fleets.B.units[0].hp;
+ const next=tryAction(g,{kind:'ability',ability:1,targetId:g.fleets.B.units[0].id});
+ assert.equal(next.fleets.B.units[0].hp,before-1);
+ assert.deepEqual([next.lastHit.incoming,next.lastHit.reactionBlocked,next.lastHit.personalBlocked,next.lastHit.fleetBlocked,next.lastHit.damage],[6,0,2,3,1]);
+ assert.equal(next.fleets.B.units[0].shield,0);assert.equal(next.fleets.B.shield,0);
+ assert.ok(next.fleets.B.units.every(u=>u.hp>=0&&u.hp<=u.maxHp));
+});
+
+test('a fully shielded hit does not require a reaction or reduce HP',()=>{
+ let g=start(createGame());
+ g.queue=[{side:'A',id:'A-scout',role:'scout',initiative:8},{side:'B',id:'B-frigate',role:'frigate',initiative:4}];
+ g.fleets.A.dice=[die('tech','tech',3)];
+ const unit=g.fleets.B.units[0];unit.shield=3;
+ const next=tryAction(g,{kind:'ability',ability:0,targetId:unit.id});
+ assert.notEqual(next.phase,'react');
+ assert.equal(next.fleets.B.units[0].hp,unit.hp);
+ assert.equal(next.fleets.B.units[0].shield,1);
+ assert.equal(next.lastHit.damage,0);
+ assert.equal(next.lastHit.personalBlocked,2);
+});
