@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {createGame,newBattle,aiDraftChoice,chooseCards,turnOf,tryAction,availableDice,UNIT_TYPES,CARD_TYPES,findPayment,canPay,playReaction,resolveReaction,aiStep,victoryPoints,aliveUnits} from '../app/fleet-test/engine.mjs';
+import {createGame,newBattle,aiDraftChoice,chooseCards,turnOf,other,tryAction,availableDice,UNIT_TYPES,CARD_TYPES,findPayment,canPay,playReaction,resolveReaction,aiStep,victoryPoints,aliveUnits} from '../app/fleet-test/engine.mjs';
 const start=g=>chooseCards(chooseCards(g,[]),[]);
 const die=(id,type,value,source=null)=>({id,type,value,source,spent:false});
 function finishRound(g){const round=g.round;let n=0;while(g.phase!=='done'&&g.round===round){assert.ok(n++<100);g=g.phase==='react'?resolveReaction(g):tryAction(g,{kind:'pass'});}return g;}
