@@ -211,7 +211,6 @@ test("fleet demo keeps one live executor and drops parallel leftovers", async ()
     "chooseCards",
     "aiDraftChoice",
     "aiActionChoice",
-    "findPayment",
     "playReaction",
     "resolveReaction",
   ]);
@@ -219,10 +218,20 @@ test("fleet demo keeps one live executor and drops parallel leftovers", async ()
   assert.doesNotMatch(engine, /export const fleetHp/);
   assert.doesNotMatch(engine, /export const fleetLosses/);
   assert.doesNotMatch(engine, /kind==="special"/);
+  assert.doesNotMatch(engine, /export function findPayment/);
+  assert.doesNotMatch(engine, /const vote=/);
   assert.match(engine, /action\.kind!=="ability"/);
+  assert.match(engine, /canPay\(pool,a\.cost\)/);
   assert.match(page, /tacticChoices\[side\]\.cardId/);
+  assert.match(page, /инициатива "\+displayInitiative/);
+  assert.doesNotMatch(page, /инициатива "\+unit\.initiative/);
+  assert.match(page, /initiative\(game,inspectedSide,liveInspected\)/);
   assert.doesNotMatch(page, /ftQueueRtl/);
   assert.doesNotMatch(css, /ftQueueRtl/);
+  assert.doesNotMatch(css, /direction:\s*rtl/);
+  assert.doesNotMatch(css, /:fullscreen/);
+  assert.doesNotMatch(css, /ftDualActions/);
+  assert.doesNotMatch(css, /ftExhausted/);
   assert.match(css, /\.ftBoardStage\{[^}]*overflow:hidden/);
 });
 
