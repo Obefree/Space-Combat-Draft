@@ -174,6 +174,12 @@ test("serves the fleet demo at its direct URL", async () => {
   assert.match(html, /ftBattlefieldTop/);
   assert.match(html, /ftBattlefieldBottom/);
   assert.match(html, /Одна тактика на этот раунд/);
+  // Single-screen cockpit: battlefield, live dice and hand share one layout.
+  assert.match(html, /class="ftCombatDesk"/);
+  assert.match(html, /class="ftDiceDock"/);
+  assert.match(html, /class="ftHandDock"/);
+  assert.match(html, /class="ftTactics"/);
+  assert.match(html, /Очередь и журнал боя/);
   assert.match(html, /Повторить seed/);
   assert.match(html, /Обе карты раскроются/);
   assert.match(html, /Даёт кубы в общий пул/);
