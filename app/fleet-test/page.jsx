@@ -57,12 +57,12 @@ function InitiativeBattlefield({game,turn,targetId,canChooseTarget,onTarget,view
 function OpponentOverview({game,side}) {
  const fleet=game.fleets[side],pool=sortedDice(availableDice(game,side));
  const hidden=game.tacticChoices[side];
- const secret=game.phase!=="draft"?"Рука скрыта":!hidden?"Выбирает тактику":hidden.cardId?"Выбор закрыт":"Пропуск закрыт";
+ const secret=game.phase!=="draft"?"Рука скрыта":!hidden?"Противник ещё выбирает тактику взакрытую.":game.tacticChoices[side].cardId?"Выбор закрыт":"Пропуск закрыт";
  return <section className="ftPanel ftOpponentOverview" aria-label="Скрытая рука и общий пул противника">
   <div className="ftOpponentCompactHead"><strong>{name(side)}</strong><small>{secret}</small></div>
   <div className="ftOpponentDice" aria-label="Общий пул кубов противника">{DIE_ORDER.map(type=>{const group=pool.filter(d=>d.type===type);return <div className={"ftOpponentDiceType ft-"+type} key={type}><b>{DIE_SYMBOL[type]} Σ{group.reduce((s,d)=>s+d.value,0)}</b><div className="ftDicePicker">{group.map(d=><span className={"ftCube ft-"+type} key={d.id}><DieFace type={type} value={d.value}/></span>)}</div></div>;})}</div>
-  <div className="ftOpponentHandCompact"><small>Рука: {fleet.hand.length} закрытых карт</small><div className="ftOpponentHand" aria-label={"Скрытая рука: "+fleet.hand.length+" карт"}>{fleet.hand.map(c=><div className="ftCardBack" aria-label="Закрытая карта противника" key={c.id}><span aria-hidden="true">✦</span></div>)}</div></div>
-  {fleet.played.length>0&&<details className="ftOpponentPlayed"><summary>Сыграно: {fleet.played.length}</summary><div className="ftPlayedRow">{fleet.played.map((c,i)=>{const a=CARD_TYPES.find(t=>t.name===c.name)?.abilities[c.field];return <article key={i}><small>Раунд {c.round} · {c.field?"Усиленная":"Базовая"}</small><b>{c.name} — {a?.name}</b><span>{a?.text}</span></article>;})}</div></details>}
+  <div className="ftOpponentHandCompact"><small>Текущая рука противника: {fleet.hand.length} закрытых карт</small><div className="ftOpponentHand" aria-label={"Скрытая рука: "+fleet.hand.length+" карт"}>{fleet.hand.map(c=><div className="ftCardBack" aria-label="Закрытая карта противника" key={c.id}><span aria-hidden="true">✦</span></div>)}</div></div>
+  <details className="ftOpponentPlayed"><summary>Сыгранные карты противника: {fleet.played.length}</summary>{fleet.played.length>0&&<div className="ftPlayedRow">{fleet.played.map((c,i)=>{const a=CARD_TYPES.find(t=>t.name===c.name)?.abilities[c.field];return <article key={i}><small>Раунд {c.round} · {c.field?"Усиленная":"Базовая"}</small><b>{c.name} — {a?.name}</b><span>{a?.text}</span></article>;})}</div>}</details>
  </section>;
 }
 export default function FleetTestPage() {
