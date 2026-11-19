@@ -112,11 +112,10 @@ export function chooseCards(state,ids=[],field=0,diceIds=[]) {
 }
 
 function finish(g) {
- const a=vote(g,"A"),b=vote(g,"B");g.winner=a===b?g.defender:a>b?"A":"B";g.phase="done";g.pending=null;
+ const a=victoryPoints(g.fleets.A),b=victoryPoints(g.fleets.B);g.winner=a===b?g.defender:a>b?"A":"B";g.phase="done";g.pending=null;
  g.result={scoreA:a,scoreB:b,kind:a===b?"defender":"points",round:3};
  msg(g,"Три раунда завершены. Сила выживших "+a+":"+b+". Победитель: "+g.fleets[g.winner].name+(a===b?" (преимущество обороняющегося)":"")+".");
 }
-const vote=(g,side)=>victoryPoints(g.fleets[side]);
 function advance(g) {
  while(g.index<g.queue.length) {const t=g.queue[g.index];if(g.fleets[t.side].units.some(u=>u.id===t.id&&u.hp>0)){g.phase="activate";return;}g.index++;}
  if(g.round>=3){finish(g);return;}
@@ -204,9 +203,6 @@ export function playReaction(state,side,cardId,field=0,diceIds=[],targetId=null)
  return state;
 }
 export function resolveReaction(state) {if(state.phase!=="react")return state;const g=clone(state);if(!resolveDamage(g,g.pending))return state;g.pending=null;next(g);return g;}
-export function findPayment(dice,cost) {
- const selected=[];for(const [type,min] of Object.entries(cost)){let total=0;for(const d of dice.filter(d=>d.type===type).sort((a,b)=>b.value-a.value)){selected.push(d);total+=d.value;if(total>=min)break;}if(total<min)return null;}return selected;
-}
 export function aiDraftChoice(g,side=g.drafting) {
  // Evaluate only public board and the AI's own hand/pool, never the opponent's sealed choice.
  const fleet=g.fleets[side],dice=availableDice(g,side);
@@ -221,7 +217,12 @@ export function aiDraftChoice(g,side=g.drafting) {
 }
 export function aiActionChoice(g) {
  const t=turnOf(g);if(!t)return null;const enemies=aliveUnits(g.fleets[other(t.side)]).sort((a,b)=>a.hp-b.hp||b.glory-a.glory);if(!enemies.length)return {kind:"pass"};
- for(const field of [1,0]) {const a=UNIT_TYPES[t.role].abilities[field];const p=findPayment(availableDice(g,t.side),a.cost);if(p)return {kind:"ability",ability:field,diceIds:p.map(d=>d.id),targetId:enemies[0].id,allyId:t.id,dieId:availableDice(g,t.side).sort((a,b)=>a.value-b.value)[0]?.id,dieType:"attack"};}
+ const pool=availableDice(g,t.side),upcoming=new Set(g.queue.slice(g.index+1).map(q=>q.id));
+ for(const field of [1,0]) {
+  const a=UNIT_TYPES[t.role].abilities[field];if(!canPay(pool,a.cost))continue;
+  const target=a.effect==="delay"?enemies.find(u=>upcoming.has(u.id))||enemies[0]:enemies[0];
+  return {kind:"ability",ability:field,targetId:target.id,allyId:t.id,dieId:[...pool].sort((x,y)=>x.value-y.value)[0]?.id,dieType:"attack"};
+ }
  return {kind:"pass"};
 }
 export function aiStep(g) {
