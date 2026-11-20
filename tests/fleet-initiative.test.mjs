@@ -145,9 +145,10 @@ test('solo: AI offensive shot queues a HUMAN defensive reaction on own target on
  assert.deepEqual(shot.fleets.B.units.map(u=>u.hp),enemyBefore);
  const resolved=resolveReaction(shot);
  assert.notEqual(resolved,shot);
- assert.equal(resolved.lastHit.attacker,'B');
- assert.equal(resolved.lastHit.defender,'A');
- assert.equal(resolved.lastHit.target,target.id);
+ // The round may end immediately after the attack, clearing lastHit; history survives.
+ assert.equal(resolved.hitHistory[0].attacker,'B');
+ assert.equal(resolved.hitHistory[0].defender,'A');
+ assert.equal(resolved.hitHistory[0].target,target.id);
  assert.deepEqual(resolved.fleets.B.units.map(u=>u.hp),enemyBefore);
 });
 
