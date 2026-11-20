@@ -429,3 +429,16 @@
   .ftCombatDesk>.ftOpponentOverview .ftOpponentHandCompact{grid-column:1/-1}
   .ftCombatDesk .ftTactics{grid-template-columns:1fr}
 }
+
+/* Unambiguous ownership of every defensive reaction and resolved hit. */
+.ftReactionIdentity{display:flex;flex-direction:column;gap:4px;padding:9px 11px;margin:4px 0;border:2px solid #d5a76c;border-radius:8px;background:#3f2b26;color:#fff1d9}
+.ftReactionIdentity strong{font-size:13px;line-height:1.2}
+.ftReactionIdentity span{font-size:12px;line-height:1.2}
+.ftReactionIdentity small{font-size:11px;color:#ffdbb6;line-height:1.25}
+.ftHitResult{border-color:#8cc4af!important;background:#173e39!important;color:#d9f4ec!important}
+.ftHitResult b{color:#fff2ce}
+@media (min-width:1050px) and (min-height:660px){
+ .ftCombatDesk .ftReactionIdentity{padding:6px 8px;gap:2px;margin:3px 0}
+ .ftCombatDesk .ftReactionIdentity strong{font-size:12px}
+ .ftCombatDesk .ftReactionIdentity span,.ftCombatDesk .ftReactionIdentity small{font-size:10px}
+}
