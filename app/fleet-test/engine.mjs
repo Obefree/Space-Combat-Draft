@@ -55,7 +55,7 @@ function reroll(g) {
  }
 }
 export function createGame(seed="battle-01",mode="solo",defender="B",scenario="fixed") {
- const g={seed,mode,scenario,tacticChoices:{},defender:defender==="A"?"A":"B",rng:hash(seed),round:1,phase:"draft",drafting:"A",queue:[],index:0,pending:null,winner:null,result:null,nextDie:0,log:[],fleets:{}};
+ const g={seed,mode,scenario,tacticChoices:{},defender:defender==="A"?"A":"B",rng:hash(seed),round:1,phase:"draft",drafting:"A",queue:[],index:0,pending:null,lastHit:null,hitHistory:[],winner:null,result:null,nextDie:0,log:[],fleets:{}};
  for(const side of ["A","B"]) {
   const combinations=[];const types=Object.keys(UNIT_TYPES);
   for(let a=0;a<types.length;a++)for(let b=a+1;b<types.length;b++)for(let c=b+1;c<types.length;c++){const roles=[types[a],types[b],types[c]];if(roles.reduce((n,r)=>n+UNIT_TYPES[r].glory,0)===11&&roles.reduce((n,r)=>n+UNIT_TYPES[r].hp,0)===18)combinations.push(roles);}
@@ -140,6 +140,7 @@ function resolveDamage(g,hit,reactionAmount=0) {
  unit.hp-=actual;
  g.lastHit={attacker:hit.attacker,defender:hit.defender,target:unit.id,name:UNIT_TYPES[unit.role].name,
    incoming,reactionBlocked,personalBlocked,fleetBlocked,damage:actual,hp:unit.hp,maxHp:unit.maxHp};
+ g.hitHistory=[g.lastHit,...(g.hitHistory||[])].slice(0,4);
  msg(g,g.fleets[hit.attacker].name+" → "+fleet.name+", "+UNIT_TYPES[unit.role].name+
    ": входящий "+incoming+"; реакция −"+reactionBlocked+"; личный щит −"+personalBlocked+
    "; щит флота −"+fleetBlocked+"; HP −"+actual+(unit.hp===0?" (уничтожен)":"")+".");
