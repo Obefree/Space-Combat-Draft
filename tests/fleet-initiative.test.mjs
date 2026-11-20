@@ -102,3 +102,51 @@ test('a fully shielded hit does not require a reaction or reduce HP',()=>{
  assert.equal(next.lastHit.damage,0);
  assert.equal(next.lastHit.personalBlocked,2);
 });
+
+
+test('solo: player shot only threatens enemy HP, AI defense resolves without human card input',()=>{
+ let g=start(createGame('solo-player-shot','solo','B'));
+ const attacker=g.fleets.A.units[0],target=g.fleets.B.units[0];
+ g.queue=[{side:'A',id:attacker.id,role:attacker.role,initiative:8},{side:'B',id:g.fleets.B.units[0].id,role:g.fleets.B.units[0].role,initiative:7}];
+ g.index=0;g.phase='activate';
+ const cost=UNIT_TYPES[attacker.role].abilities[0].cost;
+ g.fleets.A.dice=Object.entries(cost).map(([type,value])=>die('attack-source',type,value));
+ const ownBefore=g.fleets.A.units.map(u=>u.hp),enemyBefore=target.hp;
+ const shot=tryAction(g,{kind:'ability',ability:0,targetId:target.id});
+ assert.notEqual(shot,g);
+ assert.equal(shot.phase,'react');
+ assert.equal(shot.pending.attacker,'A');
+ assert.equal(shot.pending.defender,'B');
+ assert.equal(shot.pending.target,target.id);
+ assert.deepEqual(shot.fleets.A.units.map(u=>u.hp),ownBefore);
+ const resolved=aiStep(shot);
+ assert.notEqual(resolved,shot);
+ assert.equal(resolved.pending,null);
+ assert.deepEqual(resolved.fleets.A.units.map(u=>u.hp),ownBefore);
+ assert.equal(resolved.lastHit.attacker,'A');
+ assert.equal(resolved.lastHit.defender,'B');
+ assert.equal(resolved.lastHit.target,target.id);
+ assert.ok(resolved.fleets.B.units[0].hp<=enemyBefore);
+ assert.notEqual(resolved.phase,'react');
+});
+test('solo: AI offensive shot queues a HUMAN defensive reaction on own target only',()=>{
+ let g=start(createGame('solo-ai-shot','solo','B'));
+ const attacker=g.fleets.B.units[0],target=g.fleets.A.units[0];
+ g.queue=[{side:'B',id:attacker.id,role:attacker.role,initiative:8}];
+ g.index=0;g.phase='activate';
+ const cost=UNIT_TYPES[attacker.role].abilities[0].cost;
+ g.fleets.B.dice=Object.entries(cost).map(([type,value])=>die('b-source',type,value));
+ const enemyBefore=g.fleets.B.units.map(u=>u.hp);
+ const shot=tryAction(g,{kind:'ability',ability:0,targetId:target.id});
+ assert.equal(shot.phase,'react');
+ assert.equal(shot.pending.attacker,'B');
+ assert.equal(shot.pending.defender,'A');
+ assert.equal(shot.pending.target,target.id);
+ assert.deepEqual(shot.fleets.B.units.map(u=>u.hp),enemyBefore);
+ const resolved=resolveReaction(shot);
+ assert.notEqual(resolved,shot);
+ assert.equal(resolved.lastHit.attacker,'B');
+ assert.equal(resolved.lastHit.defender,'A');
+ assert.equal(resolved.lastHit.target,target.id);
+ assert.deepEqual(resolved.fleets.B.units.map(u=>u.hp),enemyBefore);
+});
