@@ -150,3 +150,36 @@ test('solo: AI offensive shot queues a HUMAN defensive reaction on own target on
  assert.equal(resolved.lastHit.target,target.id);
  assert.deepEqual(resolved.fleets.B.units.map(u=>u.hp),enemyBefore);
 });
+
+
+test('successive resolved hits stay attributed to the right fleets even when next action is AI',()=>{
+ let g=start(createGame('hit-history','solo','B'));
+ g.queue=[
+  {side:'A',id:'A-scout',role:'scout',initiative:8},
+  {side:'B',id:'B-interceptor',role:'interceptor',initiative:7},
+  {side:'A',id:'A-destroyer',role:'destroyer',initiative:5},
+ ];
+ g.index=0;g.phase='activate';
+ g.fleets.A.dice=[die('a','tech',3)];
+ g.fleets.B.dice=[die('b','attack',3)];
+ const bId=g.fleets.B.units.find(u=>u.role==='interceptor').id;
+ const aId=g.fleets.A.units.find(u=>u.role==='scout').id;
+ g=tryAction(g,{kind:'ability',ability:0,targetId:bId});
+ assert.equal(g.pending?.defender,'B');
+ g=aiStep(g);
+ assert.equal(g.lastHit?.defender,'B');
+ assert.equal(g.hitHistory.length,1);
+ assert.equal(g.hitHistory[0].attacker,'A');
+ assert.equal(g.hitHistory[0].target,bId);
+ g=tryAction(g,{kind:'ability',ability:0,targetId:aId});
+ assert.equal(g.pending?.defender,'A');
+ assert.equal(g.hitHistory[0].target,bId,'prior player shot remains visible while AI attacks');
+ g=resolveReaction(g);
+ assert.equal(g.hitHistory.length,2);
+ assert.equal(g.hitHistory[0].attacker,'B');
+ assert.equal(g.hitHistory[0].defender,'A');
+ assert.equal(g.hitHistory[0].target,aId);
+ assert.equal(g.hitHistory[1].attacker,'A');
+ assert.equal(g.hitHistory[1].defender,'B');
+ assert.equal(g.hitHistory[1].target,bId);
+});
