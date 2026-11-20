@@ -442,3 +442,14 @@
  .ftCombatDesk .ftReactionIdentity strong{font-size:12px}
  .ftCombatDesk .ftReactionIdentity span,.ftCombatDesk .ftReactionIdentity small{font-size:10px}
 }
+
+/* Resolved-hit history stays readable while the AI proceeds to its own turn. */
+.ftHitHistory{padding:5px 8px;margin:3px 0;background:#10293c;border:1px solid #486a80;border-radius:7px;color:#e0edf8}
+.ftHitHistory>strong{display:block;font-size:10px;color:#f2d69e;margin-bottom:2px}
+.ftHitHistory>div{display:flex;flex-wrap:wrap;gap:4px 9px}
+.ftHitHistory span{font-size:10px;line-height:1.25;white-space:normal}
+@media (min-width:1050px) and (min-height:660px){
+  .ftCombatDesk .ftHitHistory{padding:3px 6px;margin:2px 0}
+  .ftCombatDesk .ftHitHistory>div{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
+  .ftCombatDesk .ftHitHistory span{white-space:nowrap;flex:none;font-size:9px}
+}
