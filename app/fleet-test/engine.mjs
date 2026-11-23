@@ -84,7 +84,7 @@ function useCard(g,side,card,field,ids) {
  const dice=payment(g,side,ids,effect.cost);if(!dice)return null;
  spend(g,side,dice,true);g.fleets[side].hand=g.fleets[side].hand.filter(c=>c.id!==card.id);
  g.fleets[side].played.push({name:card.name,field,round:g.round});
- msg(g,g.fleets[side].name+": «"+card.name+" / "+effect.name+"»"+(dice.length?"; кубы сожжены навсегда":"")+".");return effect;
+ msg(g,g.fleets[side].name+": карта «"+card.name+"», выбрана ОДНА способность «"+effect.name+"» ("+(field===0?"базовая":"усиленная")+")"+(dice.length?"; кубы сожжены навсегда":"")+".");return effect;
 }
 function queueShips(g) {
  g.queue=["A","B"].flatMap(side=>aliveUnits(g.fleets[side]).map(u=>({side,id:u.id,role:u.role,initiative:initiative(g,side,u),extra:false})));
@@ -120,6 +120,8 @@ const vote=(g,side)=>victoryPoints(g.fleets[side]);
 function advance(g) {
  while(g.index<g.queue.length) {const t=g.queue[g.index];if(g.fleets[t.side].units.some(u=>u.id===t.id&&u.hp>0)){g.phase="activate";return;}g.index++;}
  if(g.round>=3){finish(g);return;}
+ const expired=["A","B"].map(side=>({side,personal:g.fleets[side].units.reduce((sum,u)=>sum+(u.shield||0),0),fleet:g.fleets[side].shield})).filter(x=>x.personal+x.fleet>0);
+ for(const x of expired)msg(g,g.fleets[x.side].name+": в конце раунда истекли временные щиты (личные "+x.personal+", флот "+x.fleet+").");
  g.round++;g.tacticChoices={};g.phase="draft";g.drafting="A";g.queue=[];g.index=0;reroll(g);
  msg(g,"Раунд "+g.round+": живые корабли заново бросили свои кубы. Сожжённые кубы не возвращаются.");
 }
@@ -164,12 +166,12 @@ function attack(g,side,target,amount) {
 }
 export function tryAction(state,action) {
  const turn=turnOf(state);if(!turn||!action)return state;
- if(action.kind==="pass"){const g=clone(state);msg(g,UNIT_TYPES[turn.role].name+" пропускает ход.");next(g);return g;}
+ if(action.kind==="pass"){const g=clone(state);msg(g,g.fleets[turn.side].name+": "+UNIT_TYPES[turn.role].name+" пропускает активацию"+(turn.extra?" (дополнительную)":"")+".");next(g);return g;}
  if(action.kind!=="ability"||![0,1].includes(action.ability))return state;
  const field=action.ability;
  const spec=UNIT_TYPES[turn.role].abilities[field];if(!canPay(availableDice(state,turn.side),spec.cost))return state;
  if((["hit","cover","delay","fortified"].includes(spec.effect))&&!aliveUnits(state.fleets[other(turn.side)]).some(u=>u.id===action.targetId))return state;
- const g=clone(state);msg(g,UNIT_TYPES[turn.role].name+": "+spec.name+" ("+costText(spec.cost)+").");
+ const g=clone(state);msg(g,g.fleets[turn.side].name+": "+UNIT_TYPES[turn.role].name+" применяет ОДНУ способность «"+spec.name+"» ("+costText(spec.cost)+")"+(turn.extra?"; дополнительная активация по карте":"")+".");
  const actor=g.fleets[turn.side].units.find(u=>u.id===turn.id);
  if(spec.effect==="tune"){
   const die=g.fleets[turn.side].dice.find(d=>d.id===action.dieId&&!d.spent);if(!die||!Object.hasOwn(DIE_SYMBOL,action.dieType))return state;
@@ -200,7 +202,7 @@ export function playReaction(state,side,cardId,field=0,diceIds=[],targetId=null)
   const u=aliveUnits(state.fleets[side]).find(u=>u.id===targetId);if(!u)return state;
   const g=clone(state),effect=useCard(g,side,card,field,diceIds);if(!effect)return state;
   g.fleets[side].extraUsed=true;if(field===1)g.fleets[side].shield=Math.min(7,g.fleets[side].shield+2);
-  g.queue.splice(g.index+1,0,{side,id:u.id,role:u.role,initiative:initiative(g,side,u),extra:true});return g;
+  g.queue.splice(g.index+1,0,{side,id:u.id,role:u.role,initiative:initiative(g,side,u),extra:true});msg(g,g.fleets[side].name+": «Вторая активация» даёт "+UNIT_TYPES[u.role].name+" ровно один дополнительный ход, а не вторую способность в этой же активации.");return g;
  }
  return state;
 }
