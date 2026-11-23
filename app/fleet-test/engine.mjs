@@ -1,382 +1,239 @@
-// Initiative Fleet Playtest — tactical rules for the existing Space Combat Draft.
-// This module has no DOM or framework dependencies, so it can be simulated directly.
+// Space Combat Draft /fleet-test. User rules, 17 November 2026.
+// Same scene, art, seeded dice and initiative axis; tactics never grant ordinary turns.
 export const DIE_SYMBOL = { attack: "⚔", defense: "🛡", tech: "✦" };
-export const CARD_TYPES = [
-  { id: "assault", name: "Боевой натиск", dice: ["attack", "attack"], hint: "Два атакующих куба", why: "Чистое давление, когда цель открыта и щиты уже сняты." },
-  { id: "guard", name: "Глухая оборона", dice: ["defense", "defense"], hint: "Два защитных куба", why: "Щит и реакция: спасает хрупкий ★-корабль без траты активации." },
-  { id: "tracking", name: "Наведение", dice: ["attack", "tech"], hint: "Атака и технология", why: "Выстрел сейчас или калибровка куба под особую способность." },
-  { id: "maneuver", name: "Тактический манёвр", dice: ["defense", "tech"], hint: "Защита и технология", why: "Темп: щит сегодня или подготовка чужого залпа завтра." },
-  { id: "combined", name: "Общий резерв", dice: ["attack", "defense"], hint: "Универсальный запас", why: "Гибкость. У Лиги одна копия — ⚔✦, у Гегемонии обе остаются ⚔🛡." },
-];
+const ability = (name, cost, text, effect, amount) => ({name, cost, text, effect, amount});
+export function costText(cost) { return Object.entries(cost).map(([type,n]) => DIE_SYMBOL[type]+n+"+").join(" и "); }
 export const UNIT_TYPES = {
-  scout: { name: "Разведчик", initiative: 8, glory: 6, hp: 4, art: "/card-art/space/generated/swift_blade.png", ability: "Сенсорный импульс", cost: "✦2+ → повысить другой куб на 2 (макс. 3)", module: "Начало боя: +1 ✦", why: "Хрупкий, но ★6." },
-  destroyer: { name: "Эсминец", initiative: 5, glory: 4, hp: 6, art: "/card-art/space/generated/huntress.png", ability: "Торпедная связка", cost: "⚔ + ✦, сумма 4+ → 4 урона", module: "Модуль: торпедные аппараты", why: "Средний ★4." },
-  cruiser: { name: "Крейсер", initiative: 3, glory: 1, hp: 8, art: "/card-art/space/generated/mercenary_captain.png", ability: "Бортовой залп", cost: "⚔ + ⚔, сумма 4+ → 5 урона", module: "Модуль: батарея тяжёлого огня", why: "Танк ★1." },
-  interceptor: { name: "Перехватчик", initiative: 7, glory: 5, hp: 4, art: "/card-art/space/generated/raider.png", ability: "Ракетный заход", cost: "⚔2+ → урон равен значению куба", module: "Начало боя: +1 ⚔", why: "Быстрый ★5." },
-  frigate: { name: "Фрегат", initiative: 4, glory: 4, hp: 6, art: "/card-art/space/generated/bodyguard.png", ability: "Плотный заслон", cost: "🛡2+ → значение куба +1 щита флоту", module: "Модуль: усиленный щит", why: "Щит ★4." },
-  dreadnought: { name: "Дредноут", initiative: 2, glory: 2, hp: 8, art: "/card-art/space/generated/old_veteran.png", ability: "Осадный разряд", cost: "⚔ + ⚔ + ✦, сумма 6+ → 6 урона", module: "Модуль: осадный реактор", why: "Кувалда ★2." },
+ scout: {name:"Разведчик",initiative:8,glory:6,hp:4,dice:["tech","tech"],art:"/card-art/space/generated/swift_blade.png",abilities:[ability("Точный импульс",{tech:3},"2 урона", "hit",2),ability("Перенастройка",{tech:8},"Выбрать куб общего пула: сменить тип и установить значение 3", "tune",3)]},
+ destroyer: {name:"Эсминец",initiative:5,glory:4,hp:6,dice:["attack","tech"],art:"/card-art/space/generated/huntress.png",abilities:[ability("Торпеда",{attack:3},"2 урона","hit",2),ability("Торпедный залп",{attack:8},"6 урона","hit",6)]},
+ cruiser: {name:"Крейсер",initiative:3,glory:1,hp:8,dice:["attack","defense"],art:"/card-art/space/generated/mercenary_captain.png",abilities:[ability("Прикрывающий огонь",{attack:3},"1 урон и 2 личных щита кораблю","cover",1),ability("Тяжёлая батарея",{attack:8},"7 урона","hit",7)]},
+ interceptor: {name:"Перехватчик",initiative:7,glory:5,hp:4,dice:["attack","defense"],art:"/card-art/space/generated/raider.png",abilities:[ability("Ракетный заход",{attack:3},"2 урона","hit",2),ability("Подавление",{attack:8},"3 урона; ещё не ходившая цель переносится в конец очереди раунда","delay",3)]},
+ frigate: {name:"Фрегат",initiative:4,glory:4,hp:6,dice:["defense","tech"],art:"/card-art/space/generated/bodyguard.png",abilities:[ability("Защитный огонь",{defense:3},"1 урон и 2 личных щита кораблю","cover",1),ability("Защитный купол",{defense:8},"Выбранному своему кораблю 4 личных щита","shield",4)]},
+ dreadnought: {name:"Дредноут",initiative:2,glory:2,hp:8,dice:["attack","defense"],art:"/card-art/space/generated/old_veteran.png",abilities:[ability("Тяжёлый выстрел",{attack:3},"3 урона","hit",3),ability("Осадный протокол",{attack:5,defense:5},"4 урона и 3 личных щита; отдельно ⚔5 и 🛡5","fortified",4)]},
 };
-export const DEMO_FLOW = [
-  { n: 1, title: "Флоты уже выбраны", what: "Лига: разведчик, эсминец, крейсер. Гегемония: перехватчик, фрегат, дредноут. Составы заданы сценарием, не драфтом.", why: "Это тактический слой 4X: в бой входят уже выбранные корабли." },
-  { n: 2, title: "Выбери 3 карты из 5", what: "Колода — 10 карт (5 пар), в руке 5. На старте вводишь 3; ещё по одной в раундах 2 и 3.", why: "Выбор сразу задаёт и кубы, и будущие приказы." },
-  { n: 3, title: "Карта становится приказом", what: "Каждая введённая карта даёт 2 куба и встаёт в ряд инициативы как одна команда кораблю.", why: "Карта — не одноразовая вспышка, а слот хода на весь бой." },
-  { n: 4, title: "Ход по инициативе", what: "Корабль с большей инициативой ходит раньше. Не больше двух активаций на корабль в раунд, особая способность — один раз.", why: "Быстрые хрупкие корабли бьют первыми, но их ★ дороже терять." },
-  { n: 5, title: "Трать кубы или пропусти", what: "В активацию можно атаковать, поднять щит, калибровать, использовать способность корабля или пропустить ход.", why: "Пропуск сохраняет кубы; потраченные исчезают из общего пула флота." },
-  { n: 6, title: "Щит глотает удар", what: "Щиты поглощают урон. 🛡 можно потратить как реакцию без активации. Неистраченные щиты сгорают в конце раунда.", why: "Реакция спасает ★-корабль, не тратя его ход." },
-  { n: 7, title: "Победа по ★ живых", what: "Три раунда или уничтожение флота. Побеждает сумма ★ выживших кораблей; оставшийся HP не счёт.", why: "Хрупкий разведчик ★6 ценнее танка-крейсера ★1." },
+export const CARD_TYPES = [
+ {id:"assault",name:"Боевой натиск",timing:"tactic",abilities:[ability("Огневая поддержка",{},"Добавить 2 ⚔ всему флоту на этот раунд","attack",2),ability("Предельный натиск",{tech:3},"Сжечь выбранные ✦ навсегда; добавить 4 ⚔ на раунд","attack",4)]},
+ {id:"reinforce",name:"Подкрепление",timing:"tactic",abilities:[ability("Резерв снабжения",{},"Добавить 1 ⚔ и 1 🛡 на раунд","mixed",2),ability("Экстренное снабжение",{tech:3},"Сжечь ✦ навсегда; добавить 2 ⚔ и 2 🛡","mixed",4)]},
+ {id:"initiative",name:"Ускорение флота",timing:"tactic",abilities:[ability("Форсаж",{},"Всем живым кораблям +2 инициативы на раунд","initiative",2),ability("Перегрузка двигателей",{defense:3},"Сжечь 🛡 навсегда; всем +4 инициативы и добавить 2 ⚔","initiative",4)]},
+ {id:"guard",name:"Защитная реакция",timing:"defense",abilities:[ability("Прикрытие",{},"Во время удара: поглотить 2 урона","block",2),ability("Аварийная завеса",{defense:3},"Сжечь 🛡 навсегда; поглотить 5 урона","block",5)]},
+ {id:"again",name:"Вторая активация",timing:"activation",abilities:[ability("Перехват управления",{},"После текущего хода ещё раз активировать выбранный свой корабль","again",1),ability("Полная готовность",{tech:3},"Сжечь ✦ навсегда; вторая активация и 2 щита флоту","again",2)]},
 ];
-const ORDER = { A: ["scout", "destroyer", "cruiser"], B: ["interceptor", "frigate", "dreadnought"] };
-// Each existing ship contributes one starting die; scout/interceptor modules contribute a bonus die.
-const SHIP_START_DICE = { scout: "tech", destroyer: "attack", cruiser: "attack", interceptor: "attack", frigate: "defense", dreadnought: "attack" };
-const MODULE_BONUS_DICE = { scout: "tech", interceptor: "attack" };
-const MAX_ROUND = 3;
+// Extra demo tactics use the same fleet-wide effect rules and two alternative fields.
+CARD_TYPES.push(
+ {id:"screen",name:"Оборонительный строй",timing:"tactic",abilities:[ability("Защитный резерв",{},"Добавить 2 🛡 в общий пул на раунд","defense",2),ability("Глубокая оборона",{tech:3},"Сжечь ✦ навсегда; добавить 4 🛡 на раунд","defense",4)]},
+ {id:"sensors",name:"Сенсорная сеть",timing:"tactic",abilities:[ability("Сканирование",{},"Добавить 2 ✦ в общий пул на раунд","tech",2),ability("Широкая сеть",{defense:3},"Сжечь 🛡 навсегда; добавить 4 ✦ на раунд","tech",4)]},
+ {id:"crossfire",name:"Перекрёстный огонь",timing:"tactic",abilities:[ability("Поддержка батарей",{},"Добавить 1 ⚔ и 1 🛡 на раунд","mixed",2),ability("Усиленные батареи",{tech:3},"Сжечь ✦ навсегда; добавить 4 ⚔ на раунд","attack",4)]}
+);
+function shuffled(g,values){const result=[...values];for(let i=result.length-1;i>0;i--){const j=Math.floor(random(g)*(i+1));[result[i],result[j]]=[result[j],result[i]];}return result;}
+export function newBattle(mode="solo",defender="B"){return createGame(globalThis.crypto.randomUUID(),mode,defender,"random");}
+export const DEMO_FLOW = [
+ {n:1,title:"Значки задают общий бросок",what:"В начале каждого раунда значки живых кораблей определяют бросок в общий пул игрока. Значения 1–3, как в основной игре."},
+ {n:2,title:"Одна тактика на раунд",what:"Каждый флот выбирает одну тактику взакрытую или пропускает. Обе карты раскрываются и применяются после обоих выборов. Эффект действует на весь флот. Тактики не являются модулями и не назначаются кораблям."},
+ {n:3,title:"Каждый корабль ходит сам",what:"Все живые корабли активируются по инициативе слева направо, даже без тактик. При равной инициативе первым ходит обороняющийся."},
+ {n:4,title:"Две способности",what:"В свой ход выбери дешёвую способность (обычно сумма 3+ одного типа), сильную (8+ или отдельные суммы типов) либо пропусти. Одна способность завершает активацию."},
+ {n:5,title:"Реакции и постоянная цена",what:"Защитная реакция и вторая активация играются в ходе раунда. Усиленное поле тактики может сжечь кубы навсегда. Обычная способность проверяет суммы общего пула и не расходует кубы."},
+ {n:6,title:"Ровно три раунда",what:"После третьего раунда сравнивается сумма ★ силы выживших. При равенстве побеждает обороняющийся. Модули развития поля в этом демо не участвуют."},
+];
+const ORDER = {A:["scout","destroyer","cruiser"],B:["interceptor","frigate","dreadnought"]};
+function hash(text) { let v=2166136261; for (const c of text) {v^=c.charCodeAt(0);v=Math.imul(v,16777619);} return v>>>0||1; }
+function random(g) {g.rng=(g.rng+0x6d2b79f5)>>>0;let t=g.rng;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296;}
+function face(g) { return 1+Math.floor(random(g)*3); }
+const clone=g=>structuredClone(g);
+export const other=side=>side==="A"?"B":"A";
+export const aliveUnits=f=>f.units.filter(u=>u.hp>0);
+export const victoryPoints=f=>aliveUnits(f).reduce((s,u)=>s+u.glory,0);
+export const turnOf=g=>g.phase==="activate"?g.queue[g.index]||null:null;
+function msg(g,text) {g.log.unshift(text);g.log=g.log.slice(0,60);}
+export function initiative(g,side,u) {return u.initiative+(u.roundInitiative||0)+g.fleets[side].initiativeBonus;}
+function reroll(g) {
+ g.lastHit=null;g.pending=null;
+ for(const side of ["A","B"]) {
+  const f=g.fleets[side];for(const u of f.units){u.shield=0;u.roundInitiative=0;} f.shield=0;f.initiativeBonus=0;f.extraUsed=false;
+  // Ship dice have stable identities, so a burned die cannot reappear next round.
+  f.dice=aliveUnits(f).flatMap(u=>UNIT_TYPES[u.role].dice.map((type,i)=>({id:u.id+"-d"+i,type,source:u.id,value:0,spent:false})))
+   .filter(d=>!f.burned.includes(d.id)).map(d=>({...d,value:face(g)}));
+ }
+}
+export function createGame(seed="battle-01",mode="solo",defender="B",scenario="fixed") {
+ const g={seed,mode,scenario,tacticChoices:{},defender:defender==="A"?"A":"B",rng:hash(seed),round:1,phase:"draft",drafting:"A",queue:[],index:0,pending:null,lastHit:null,hitHistory:[],winner:null,result:null,nextDie:0,log:[],fleets:{}};
+ for(const side of ["A","B"]) {
+  const combinations=[];const types=Object.keys(UNIT_TYPES);
+  for(let a=0;a<types.length;a++)for(let b=a+1;b<types.length;b++)for(let c=b+1;c<types.length;c++){const roles=[types[a],types[b],types[c]];if(roles.reduce((n,r)=>n+UNIT_TYPES[r].glory,0)===11&&roles.reduce((n,r)=>n+UNIT_TYPES[r].hp,0)===18)combinations.push(roles);}
+  const options=side==="B"?combinations.filter(roles=>roles.join()!==g.fleets.A.units.map(u=>u.role).join()):combinations;
+  const roles=scenario==="random"?shuffled(g,options)[0]:ORDER[side];
+  const tactics=scenario==="random"?shuffled(g,CARD_TYPES.filter(c=>c.timing==="tactic")).slice(0,5):CARD_TYPES.filter(c=>c.timing==="tactic").slice(0,5);
+  const cards=[...tactics,...CARD_TYPES.filter(c=>c.timing!=="tactic")];
+  g.fleets[side]={name:side==="A"?"Лига Ориона":"Гегемония",units:roles.map(role=>({id:side+"-"+role,role,hp:UNIT_TYPES[role].hp,maxHp:UNIT_TYPES[role].hp,initiative:UNIT_TYPES[role].initiative,glory:UNIT_TYPES[role].glory,shield:0})),dice:[],burned:[],shield:0,initiativeBonus:0,extraUsed:false,hand:cards.map(c=>({...structuredClone(c),id:side+"-"+c.id,type:c.id})),played:[]};
+ }
+ reroll(g);msg(g,"Раунд 1: корабли бросили свои кубы. Каждый флот может сыграть одну тактику.");return g;
+}
+export function availableDice(g,side) {return g.fleets[side].dice.filter(d=>!d.spent);}
+export function canPay(dice,cost) {return Object.entries(cost).every(([type,n])=>dice.filter(d=>d.type===type).reduce((s,d)=>s+d.value,0)>=n);}
+function payment(g,side,ids,cost) {
+ if(!Array.isArray(ids)||new Set(ids).size!==ids.length)return null;
+ const available=availableDice(g,side);const selected=ids.map(id=>available.find(d=>d.id===id));
+ if(selected.some(d=>!d)||!canPay(selected,cost))return null;
+ // Reject accidental selection of other colours and free-effect burning.
+ if(selected.some(d=>!Object.hasOwn(cost,d.type)))return null;
+ return selected;
+}
+function spend(g,side,dice,burn=false) {for(const d of dice){const live=g.fleets[side].dice.find(x=>x.id===d.id);live.spent=true;if(burn&&!g.fleets[side].burned.includes(d.id))g.fleets[side].burned.push(d.id);}}
+function bonusDice(g,side,type,n) {for(let i=0;i<n;i++)g.fleets[side].dice.push({id:"bonus-"+(++g.nextDie),type,value:face(g),spent:false,source:null});}
+function useCard(g,side,card,field,ids) {
+ const effect=card.abilities[field];if(!effect)return null;
+ const dice=payment(g,side,ids,effect.cost);if(!dice)return null;
+ spend(g,side,dice,true);g.fleets[side].hand=g.fleets[side].hand.filter(c=>c.id!==card.id);
+ g.fleets[side].played.push({name:card.name,field,round:g.round});
+ msg(g,g.fleets[side].name+": карта «"+card.name+"», выбрана ОДНА способность «"+effect.name+"» ("+(field===0?"базовая":"усиленная")+")"+(dice.length?"; кубы сожжены навсегда":"")+".");return effect;
+}
+function queueShips(g) {
+ g.queue=["A","B"].flatMap(side=>aliveUnits(g.fleets[side]).map(u=>({side,id:u.id,role:u.role,initiative:initiative(g,side,u),extra:false})));
+ g.queue.sort((a,b)=>b.initiative-a.initiative||(a.side===b.side?a.id.localeCompare(b.id):a.side===g.defender?-1:1));g.index=0;g.phase="activate";
+ msg(g,"Раунд "+g.round+": каждый живой корабль получает собственную активацию.");advance(g);
+}
+export function chooseCards(state,ids=[],field=0,diceIds=[]) {
+ if(state.phase!=="draft"||!Array.isArray(ids)||ids.length>1||![0,1].includes(field))return state;
+ const side=state.drafting,card=ids.length?state.fleets[side].hand.find(c=>c.id===ids[0]&&c.timing==="tactic"):null;
+ if(ids.length&&(!card||!payment(state,side,diceIds,card.abilities[field].cost)))return state;
+ const g=clone(state);g.tacticChoices[side]={cardId:card?.id||null,field,diceIds:[...diceIds]};
+ if(side==="A"){g.drafting="B";return g;}
+ // Both choices are locked before either side's hand, pool or log reveals a tactic.
+ for(const player of ["A","B"]){
+  const choice=g.tacticChoices[player];
+  if(!choice.cardId){msg(g,g.fleets[player].name+": раскрывает пропуск тактики.");continue;}
+  const played=g.fleets[player].hand.find(c=>c.id===choice.cardId);
+  const effect=useCard(g,player,played,choice.field,choice.diceIds);
+  if(!effect)return state;
+  if(["attack","defense","tech"].includes(effect.effect))bonusDice(g,player,effect.effect,effect.amount);
+  if(effect.effect==="mixed"){bonusDice(g,player,"attack",effect.amount/2);bonusDice(g,player,"defense",effect.amount/2);}
+  if(effect.effect==="initiative"){g.fleets[player].initiativeBonus=effect.amount;if(choice.field===1)bonusDice(g,player,"attack",2);}
+ }
+ g.tacticChoices={};queueShips(g);return g;
+}
 
-function hash(text) {
-  let v = 2166136261;
-  for (const c of text) { v ^= c.charCodeAt(0); v = Math.imul(v, 16777619); }
-  return v >>> 0 || 1;
+function finish(g) {
+ const a=vote(g,"A"),b=vote(g,"B");g.winner=a===b?g.defender:a>b?"A":"B";g.phase="done";g.pending=null;
+ g.result={scoreA:a,scoreB:b,kind:a===b?"defender":"points",round:3};
+ msg(g,"Три раунда завершены. Сила выживших "+a+":"+b+". Победитель: "+g.fleets[g.winner].name+(a===b?" (преимущество обороняющегося)":"")+".");
 }
-function roll(g) {
-  g.rng = (g.rng + 0x6d2b79f5) >>> 0;
-  let t = g.rng;
-  t = Math.imul(t ^ (t >>> 15), t | 1);
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-}
-function addDie(g, side, type) {
-  g.nextDie++;
-  g.fleets[side].dice.push({ id: "d" + g.nextDie, type, value: 1 + Math.floor(roll(g) * 3) });
-}
-function msg(g, text) { g.log.unshift(text); g.log = g.log.slice(0, 45); }
-function clone(g) { return structuredClone(g); }
-export function other(side) { return side === "A" ? "B" : "A"; }
-export function fleetHp(f) { return f.units.reduce((sum, u) => sum + u.hp, 0); }
-export function victoryPoints(f) { return f.units.reduce((sum, u) => sum + (u.hp > 0 ? u.glory : 0), 0); }
-export function fleetLosses(f) { return f.units.filter(u => u.hp <= 0).length; }
-export function turnOf(g) { return g.phase === "activate" ? g.queue[g.index] || null : null; }
-export function aliveUnits(f) { return f.units.filter(u => u.hp > 0); }
-export function createGame(seed = "battle-01", mode = "solo") {
-  const g = { rng: hash(seed), seed, mode, round: 1, phase: "draft", drafting: "A", placing: "A", queue: [], index: 0, pending: null, winner: null, result: null, specialUsed: { A: [], B: [] }, nextDie: 0, log: [], fleets: {} };
-  for (const side of ["A", "B"]) {
-    const cards = CARD_TYPES.flatMap(t => [0, 1].map(copyNumber => ({ id: side + "-" + t.id + "-" + copyNumber, type: t.id, name: t.name, dice: [...t.dice], hint: t.hint, why: t.why })));
-    // Initial faction asymmetry is deliberately small:
-    // one League "combined" copy becomes ⚔✦ (mobility),
-    // Hegemony retains ⚔🛡 (security). Both still receive exactly two dice.
-    const swap = cards.find(c => c.type === "combined" && c.id.endsWith("-1"));
-    if (side === "A") {
-      swap.dice = ["attack", "tech"];
-      swap.hint = "Огонь и технологическая гибкость";
-      swap.why = "Лига: одна копия резерва даёт выстрел и калибровку вместо щита.";
-    } else {
-      swap.dice = ["attack", "defense"];
-      swap.hint = "Атака и щит";
-      swap.why = "Гегемония держит обе копии универсальными: удар или реакция.";
-    }
-    for (let i = cards.length - 1; i > 0; i--) {
-      const j = Math.floor(roll(g) * (i + 1));
-      [cards[i], cards[j]] = [cards[j], cards[i]];
-    }
-    g.fleets[side] = {
-      name: side === "A" ? "Лига Ориона" : "Гегемония",
-      hand: cards.slice(0, 5),
-      activeCards: [],
-      dice: [],
-      shield: 0,
-      units: ORDER[side].map((role, i) => ({
-        id: side + "-" + role, role, hp: UNIT_TYPES[role].hp, maxHp: UNIT_TYPES[role].hp,
-        initiative: UNIT_TYPES[role].initiative, glory: UNIT_TYPES[role].glory, art: UNIT_TYPES[role].art,
-      })),
-    };
-  }
-  msg(g, "Начало боя. Флоты уже определены стратегической частью. Выберите три стартовые карты каждого флота.");
-  return g;
-}
-export function chooseCards(state, ids) {
-  const g = clone(state);
-  if (g.phase !== "draft") return state;
-  const required = g.round === 1 ? 3 : 1;
-  const side = g.drafting, f = g.fleets[side];
-  if (!Array.isArray(ids) || ids.length !== required || new Set(ids).size !== required) return state;
-  if (!ids.every(id => f.hand.some(c => c.id === id))) return state;
-  const cards = ids.map(id => f.hand.find(c => c.id === id));
-  f.hand = f.hand.filter(c => !ids.includes(c.id));
-  f.activeCards.push(...cards);
-  for (const c of cards) for (const type of c.dice) addDie(g, side, type);
-  if (g.round === 1) {
-    for (const ship of aliveUnits(f)) {
-      addDie(g, side, SHIP_START_DICE[ship.role]);
-      if (MODULE_BONUS_DICE[ship.role]) addDie(g, side, MODULE_BONUS_DICE[ship.role]);
-    }
-  }
-  msg(g, f.name + ": " + cards.map(c => "«" + c.name + "»").join(", ") + "; получено кубов: " + (cards.length * 2 + (g.round === 1 ? aliveUnits(f).length + aliveUnits(f).filter(u => MODULE_BONUS_DICE[u.role]).length : 0)) + ".");
-  if (side === "A") g.drafting = "B";
-  else { g.phase = "place"; g.placing = "A"; }
-  return g;
-}
-// Cards are command tokens on the initiative track. A token grants one action,
-// not a fresh dice roll. A ship can take at most two tokens per round.
-export function suggestedAssignments(g, side) {
-  const cards = g.fleets[side].activeCards;
-  const units = aliveUnits(g.fleets[side]);
-  const assignments = {};
-  const counts = Object.fromEntries(units.map(u => [u.id, 0]));
-  // Previous card placements stay in the row; new cards are added to available ships.
-  for (const card of cards) {
-    const unit = units.find(u => u.id === card.assignedShipId);
-    if (unit && counts[unit.id] < 2) { assignments[card.id] = unit.id; counts[unit.id]++; }
-  }
-  for (const card of cards) {
-    if (assignments[card.id]) continue;
-    const preferences = units.map(u => {
-      const attack = card.dice.filter(d => d === "attack").length;
-      const defense = card.dice.filter(d => d === "defense").length;
-      const tech = card.dice.filter(d => d === "tech").length;
-      const synergy = u.role === "scout" ? tech * 2 : u.role === "frigate" ? defense * 2
-        : u.role === "destroyer" ? attack * 2 : u.role === "cruiser" || u.role === "dreadnought" ? attack * 2 + tech : attack * 2;
-      return { u, score: synergy - 4 * counts[u.id] + (card.assignedShipId === u.id ? 0.75 : 0) };
-    }).filter(p => counts[p.u.id] < 2).sort((a,b) => b.score - a.score || b.u.initiative - a.u.initiative);
-    const chosen = preferences[0]?.u;
-    assignments[card.id] = chosen ? chosen.id : "reserve";
-    if (chosen) counts[chosen.id]++;
-  }
-  return assignments;
-}
-export function placeCards(state, assignments) {
-  if (state.phase !== "place") return state;
-  const g = clone(state);
-  const side = g.placing, fleet = g.fleets[side];
-  if (!assignments || typeof assignments !== "object") return state;
-  const counts = {};
-  for (const card of fleet.activeCards) {
-    const target = assignments[card.id];
-    if (target !== "reserve" && !fleet.units.some(u => u.id === target && u.hp > 0)) return state;
-    if (target !== "reserve") {
-      counts[target] = (counts[target] || 0) + 1;
-      if (counts[target] > 2) return state;
-    }
-    card.assignedShipId = target;
-  }
-  msg(g, fleet.name + ": приказы выставлены на шкалу инициативы (" + fleet.activeCards.filter(c => c.assignedShipId !== "reserve").length + " активации).");
-  if (side === "A") g.placing = "B";
-  else beginActivation(g);
-  return g;
-}
-function beginActivation(g) {
-  g.phase = "activate";
-  g.queue = [];
-  g.specialUsed = { A: [], B: [] };
-  for (const side of ["A", "B"]) {
-    const counts = {};
-    for (const card of g.fleets[side].activeCards) {
-      const unit = g.fleets[side].units.find(u => u.id === card.assignedShipId && u.hp > 0);
-      if (!unit) continue;
-      counts[unit.id] = (counts[unit.id] || 0) + 1;
-      g.queue.push({side, id:unit.id, role:unit.role, initiative:unit.initiative,
-        wave:counts[unit.id], cardId:card.id, cardName:card.name});
-    }
-  }
-  g.queue.sort((a,b) => a.wave - b.wave || b.initiative - a.initiative || a.side.localeCompare(b.side));
-  g.index = 0;
-  msg(g, "Раунд " + g.round + ": " + g.queue.length + " приказов в очереди инициативы. Один приказ = одна активация; можно пропустить, не расходуя кубы.");
-  advance(g);
-}
-function applyDamage(g, hit) {
-  const defender = g.fleets[hit.defender];
-  const unit = defender.units.find(u => u.id === hit.target && u.hp > 0);
-  if (!unit) return;
-  const actual = Math.min(unit.hp, hit.damage);
-  unit.hp -= actual;
-  msg(g, defender.name + ": " + UNIT_TYPES[unit.role].name + " получает " + actual + " урона" + (unit.hp ? "" : " и уничтожен") + ".");
-}
-function victory(g) {
-  const aAlive = aliveUnits(g.fleets.A).length;
-  const bAlive = aliveUnits(g.fleets.B).length;
-  const roundEnded = g.round === MAX_ROUND && g.index >= g.queue.length;
-  if (aAlive > 0 && bAlive > 0 && !roundEnded) return false;
-
-  // HP is never a victory tiebreaker. Only the glory of SURVIVING ships counts.
-  const a = victoryPoints(g.fleets.A), b = victoryPoints(g.fleets.B);
-  const mutual = aAlive === 0 && bAlive === 0;
-  const wiped = aAlive === 0 || bAlive === 0;
-  const kind = mutual ? "mutual-annihilation" : wiped ? "annihilation" : a === b ? "draw" : "points";
-  g.winner = a === b ? "draw" : a > b ? "A" : "B";
-  g.result = { kind, scoreA:a, scoreB:b, lostA:fleetLosses(g.fleets.A),
-    lostB:fleetLosses(g.fleets.B), initialA:g.fleets.A.units.length,
-    initialB:g.fleets.B.units.length, round:g.round };
-  g.phase = "done";
-  g.pending = null;
-  const label = kind === "mutual-annihilation" ? "взаимное уничтожение" :
-    kind === "annihilation" ? "полное уничтожение флота" :
-    kind === "draw" ? "ничья по победным очкам" : "победа по очкам выживших кораблей";
-  msg(g, "Бой окончен: " + label + ". Очки " + a + ":" + b +
-    ", потери " + g.result.lostA + ":" + g.result.lostB + ".");
-  return true;
-}
+const vote=(g,side)=>victoryPoints(g.fleets[side]);
 function advance(g) {
-  if (victory(g)) return;
-  while (g.index < g.queue.length) {
-    const q = g.queue[g.index];
-    if (g.fleets[q.side].units.some(u => u.id === q.id && u.hp > 0)) {
-      g.phase = "activate";
-      return;
-    }
-    g.index++;
+ while(g.index<g.queue.length) {const t=g.queue[g.index];if(g.fleets[t.side].units.some(u=>u.id===t.id&&u.hp>0)){g.phase="activate";return;}g.index++;}
+ if(g.round>=3){finish(g);return;}
+ const expired=["A","B"].map(side=>({side,personal:g.fleets[side].units.reduce((sum,u)=>sum+(u.shield||0),0),fleet:g.fleets[side].shield})).filter(x=>x.personal+x.fleet>0);
+ for(const x of expired)msg(g,g.fleets[x.side].name+": в конце раунда истекли временные щиты (личные "+x.personal+", флот "+x.fleet+").");
+ g.round++;g.tacticChoices={};g.phase="draft";g.drafting="A";g.queue=[];g.index=0;reroll(g);
+ msg(g,"Раунд "+g.round+": живые корабли заново бросили свои кубы. Сожжённые кубы не возвращаются.");
+}
+function next(g) {g.index++;advance(g);}
+// Resolve exactly one hit. Reaction absorption happens before persistent shields.
+function resolveDamage(g,hit,reactionAmount=0) {
+ if(!hit||!["A","B"].includes(hit.attacker)||hit.defender!==other(hit.attacker))return false;
+ const fleet=g.fleets[hit.defender],unit=fleet.units.find(u=>u.id===hit.target&&u.hp>0);
+ if(!unit||!Number.isFinite(hit.damage)||hit.damage<0)return false;
+ const incoming=Math.floor(hit.damage);
+ const reactionBlocked=Math.min(incoming,Math.max(0,Math.floor(reactionAmount)));
+ let remaining=incoming-reactionBlocked;
+ const personalBlocked=Math.min(unit.shield||0,remaining);
+ unit.shield=(unit.shield||0)-personalBlocked;remaining-=personalBlocked;
+ const fleetBlocked=Math.min(fleet.shield||0,remaining);
+ fleet.shield=(fleet.shield||0)-fleetBlocked;remaining-=fleetBlocked;
+ const actual=Math.min(unit.hp,remaining);
+ unit.hp-=actual;
+ g.lastHit={attacker:hit.attacker,defender:hit.defender,target:unit.id,name:UNIT_TYPES[unit.role].name,
+   incoming,reactionBlocked,personalBlocked,fleetBlocked,damage:actual,hp:unit.hp,maxHp:unit.maxHp};
+ g.hitHistory=[g.lastHit,...(g.hitHistory||[])].slice(0,4);
+ msg(g,g.fleets[hit.attacker].name+" → "+fleet.name+", "+UNIT_TYPES[unit.role].name+
+   ": входящий "+incoming+"; реакция −"+reactionBlocked+"; личный щит −"+personalBlocked+
+   "; щит флота −"+fleetBlocked+"; HP −"+actual+(unit.hp===0?" (уничтожен)":"")+".");
+ return true;
+}
+function attack(g,side,target,amount) {
+ if(!["A","B"].includes(side)||!Number.isFinite(amount)||amount<0)return false;
+ const defender=other(side),f=g.fleets[defender],unit=aliveUnits(f).find(u=>u.id===target);
+ if(!unit)return false; // Friendly fire and dead targets are illegal.
+ g.lastHit=null;
+ const hit={attacker:side,defender,target,damage:Math.floor(amount)};
+ const uncovered=Math.max(0,hit.damage-(unit.shield||0)-(f.shield||0));
+ if(uncovered>0&&f.hand.some(c=>c.timing==="defense")){
+  g.pending=hit;g.phase="react";
+  msg(g,g.fleets[side].name+" → "+f.name+", "+UNIT_TYPES[unit.role].name+
+    ": входящий "+hit.damage+"; ожидается защитная реакция (личный щит "+
+    (unit.shield||0)+", щит флота "+(f.shield||0)+").");
+ }else resolveDamage(g,hit);
+ if(g.phase!=="react")next(g);
+ return true;
+}
+export function tryAction(state,action) {
+ const turn=turnOf(state);if(!turn||!action)return state;
+ if(action.kind==="pass"){const g=clone(state);msg(g,g.fleets[turn.side].name+": "+UNIT_TYPES[turn.role].name+" пропускает активацию"+(turn.extra?" (дополнительную)":"")+".");next(g);return g;}
+ if(action.kind!=="ability"||![0,1].includes(action.ability))return state;
+ const field=action.ability;
+ const spec=UNIT_TYPES[turn.role].abilities[field];if(!canPay(availableDice(state,turn.side),spec.cost))return state;
+ if((["hit","cover","delay","fortified"].includes(spec.effect))&&!aliveUnits(state.fleets[other(turn.side)]).some(u=>u.id===action.targetId))return state;
+ const g=clone(state);msg(g,g.fleets[turn.side].name+": "+UNIT_TYPES[turn.role].name+" применяет ОДНУ способность «"+spec.name+"» ("+costText(spec.cost)+")"+(turn.extra?"; дополнительная активация по карте":"")+".");
+ const actor=g.fleets[turn.side].units.find(u=>u.id===turn.id);
+ if(spec.effect==="tune"){
+  const die=g.fleets[turn.side].dice.find(d=>d.id===action.dieId&&!d.spent);if(!die||!Object.hasOwn(DIE_SYMBOL,action.dieType))return state;
+  die.type=action.dieType;die.value=3;msg(g,"Перенастройка общего пула: "+DIE_SYMBOL[die.type]+"3.");next(g);
+ }else if(spec.effect==="shield"){
+  const ally=aliveUnits(g.fleets[turn.side]).find(u=>u.id===(action.allyId||turn.id));if(!ally)return state;
+  ally.shield=Math.min(7,(ally.shield||0)+spec.amount);msg(g,UNIT_TYPES[ally.role].name+": личные щиты "+ally.shield+".");next(g);
+ }else {
+  if(spec.effect==="cover")actor.shield=Math.min(7,(actor.shield||0)+2);
+  if(spec.effect==="fortified")actor.shield=Math.min(7,(actor.shield||0)+3);
+  if(spec.effect==="delay"){
+   const idx=g.queue.findIndex((q,i)=>i>g.index&&q.id===action.targetId);if(idx>=0){const [delayed]=g.queue.splice(idx,1);const unit=g.fleets[other(turn.side)].units.find(u=>u.id===action.targetId);const lastInitiative=Math.min(delayed.initiative,...g.queue.slice(g.index+1).map(q=>q.initiative))-1;unit.roundInitiative=lastInitiative-unit.initiative-g.fleets[other(turn.side)].initiativeBonus;delayed.initiative=lastInitiative;g.queue.push(delayed);msg(g,"Подавление: цель перенесена в конец очереди раунда.");}
   }
-  if (g.round >= MAX_ROUND) { victory(g); return; }
-  g.fleets.A.shield = 0;
-  g.fleets.B.shield = 0;
-  msg(g, "Конец раунда: неистраченные временные щиты рассеиваются, кубы остаются.");
-  g.round++;
-  g.phase = "draft";
-  g.drafting = "A";
-  g.queue = [];
-  g.index = 0;
-  msg(g, "Раунд " + g.round + ": выберите по одной новой карте. Старые кубы сохраняются.");
+  if(!attack(g,turn.side,action.targetId,spec.amount))return state;
+ }
+ return g;
 }
-function nextTurn(g) { g.index++; advance(g); }
-function launch(g, attacker, targetId, amount) {
-  const defenderSide = other(attacker);
-  const defender = g.fleets[defenderSide];
-  if (!defender.units.some(u => u.id === targetId && u.hp > 0)) return false;
-  const blocked = Math.min(defender.shield, amount);
-  defender.shield -= blocked;
-  let hit = { attacker, defender: defenderSide, target: targetId, damage: amount - blocked, original: amount };
-  msg(g, g.fleets[attacker].name + " атакует на " + amount + " урона" + (blocked ? "; щит поглотил " + blocked : "") + ".");
-  if (hit.damage > 0 && defender.dice.some(d => d.type === "defense")) {
-    g.pending = hit;
-    g.phase = "react";
-  } else {
-    applyDamage(g, hit);
-    nextTurn(g);
-  }
-  return true;
+export function playReaction(state,side,cardId,field=0,diceIds=[],targetId=null) {
+ if(![0,1].includes(field)||!["A","B"].includes(side))return state;
+ const card=state.fleets[side].hand.find(c=>c.id===cardId);if(!card)return state;
+ if(card.timing==="defense") {
+  if(state.phase!=="react"||state.pending?.defender!==side)return state;
+  const g=clone(state),effect=useCard(g,side,card,field,diceIds);if(!effect)return state;
+  if(!resolveDamage(g,g.pending,effect.amount))return state;g.pending=null;next(g);return g;
+ }
+ if(card.timing==="activation") {
+  if(state.phase!=="activate"||turnOf(state)?.side!==side||state.fleets[side].extraUsed)return state;
+  const u=aliveUnits(state.fleets[side]).find(u=>u.id===targetId);if(!u)return state;
+  const g=clone(state),effect=useCard(g,side,card,field,diceIds);if(!effect)return state;
+  g.fleets[side].extraUsed=true;if(field===1)g.fleets[side].shield=Math.min(7,g.fleets[side].shield+2);
+  g.queue.splice(g.index+1,0,{side,id:u.id,role:u.role,initiative:initiative(g,side,u),extra:true});msg(g,g.fleets[side].name+": «Вторая активация» даёт "+UNIT_TYPES[u.role].name+" ровно один дополнительный ход, а не вторую способность в этой же активации.");return g;
+ }
+ return state;
 }
-export function resolveReaction(state, dieId = null) {
-  if (state.phase !== "react" || !state.pending) return state;
-  const g = clone(state);
-  const p = g.pending, f = g.fleets[p.defender];
-  if (dieId) {
-    const die = f.dice.find(d => d.id === dieId && d.type === "defense");
-    if (!die) return state;
-    p.damage = Math.max(0, p.damage - die.value);
-    f.dice = f.dice.filter(d => d.id !== dieId);
-    msg(g, f.name + " тратит 🛡" + die.value + " на защитную реакцию.");
-  } else {
-    msg(g, f.name + " принимает удар без защитной реакции.");
-  }
-  applyDamage(g, p);
-  g.pending = null;
-  nextTurn(g);
-  return g;
+export function resolveReaction(state) {if(state.phase!=="react")return state;const g=clone(state);if(!resolveDamage(g,g.pending))return state;g.pending=null;next(g);return g;}
+export function findPayment(dice,cost) {
+ const selected=[];for(const [type,min] of Object.entries(cost)){let total=0;for(const d of dice.filter(d=>d.type===type).sort((a,b)=>b.value-a.value)){selected.push(d);total+=d.value;if(total>=min)break;}if(total<min)return null;}return selected;
 }
-function selectedDice(f, ids) {
-  if (!Array.isArray(ids) || new Set(ids).size !== ids.length) return null;
-  const dice = ids.map(id => f.dice.find(d => d.id === id));
-  return dice.every(Boolean) ? dice : null;
-}
-function typesAre(dice, types) {
-  if (dice.length !== types.length) return false;
-  return [...dice.map(d => d.type)].sort().join("|") === [...types].sort().join("|");
-}
-export function tryAction(state, action) {
-  if (state.phase !== "activate" || !turnOf(state)) return state;
-  const g = clone(state), turn = turnOf(g);
-  const f = g.fleets[turn.side], unit = f.units.find(u => u.id === turn.id);
-  if (!unit || unit.hp <= 0) { nextTurn(g); return g; }
-  if (action.kind === "special" && g.specialUsed[turn.side].includes(unit.id)) return state;
-  if (action.kind === "pass") {
-    msg(g, "«" + turn.cardName + "»: " + UNIT_TYPES[unit.role].name + " (" + turn.side + ") пропускает активацию, сохраняя кубы.");
-    nextTurn(g); return g;
-  }
-  const dice = selectedDice(f, action.diceIds || []);
-  if (!dice) return state;
-  const sum = dice.reduce((n, d) => n + d.value, 0);
-  let hit = 0, barrier = 0, boost = 0;
-  if (action.kind === "fire" && typesAre(dice, ["attack"])) hit = dice[0].value === 3 ? 2 : 1;
-  else if (action.kind === "brace" && typesAre(dice, ["defense"])) barrier = dice[0].value;
-  else if (action.kind === "tune" && typesAre(dice, ["tech"])) boost = 1;
-  else if (action.kind === "special") {
-    if (unit.role === "scout" && typesAre(dice, ["tech"]) && dice[0].value >= 2) boost = 2;
-    else if (unit.role === "interceptor" && typesAre(dice, ["attack"]) && dice[0].value >= 2) hit = dice[0].value;
-    else if (unit.role === "destroyer" && typesAre(dice, ["attack", "tech"]) && sum >= 4) hit = 4;
-    else if (unit.role === "frigate" && typesAre(dice, ["defense"]) && dice[0].value >= 2) barrier = dice[0].value + 1;
-    else if (unit.role === "cruiser" && typesAre(dice, ["attack", "attack"]) && sum >= 4) hit = 5;
-    else if (unit.role === "dreadnought" && typesAre(dice, ["attack", "attack", "tech"]) && sum >= 6) hit = 6;
-    else return state;
-  } else return state;
-
-  if (hit && !g.fleets[other(turn.side)].units.some(u => u.id === action.targetId && u.hp > 0)) return state;
-  if (boost && !f.dice.some(d => !action.diceIds.includes(d.id) && d.value < 3)) return state;
-
-  const payment = new Set(action.diceIds);
-  f.dice = f.dice.filter(d => !payment.has(d.id));
-  if (action.kind === "special") g.specialUsed[turn.side].push(unit.id);
-  msg(g, "«" + turn.cardName + "» → " + UNIT_TYPES[unit.role].name + " использует «" + (action.kind === "special" ? UNIT_TYPES[unit.role].ability : action.kind === "fire" ? "Стрельба" : action.kind === "brace" ? "Щит" : "Калибровка") + "»: " + dice.map(d => DIE_SYMBOL[d.type] + d.value).join(" + ") + ".");
-  if (barrier) {
-    const before = f.shield;
-    f.shield = Math.min(7, f.shield + barrier);
-    msg(g, "Защитное поле " + f.name + ": +" + (f.shield - before) + " (всего " + f.shield + ").");
-  }
-  if (boost) {
-    const candidates = f.dice.filter(d => d.value < 3);
-    candidates.sort((a, b) => a.value - b.value || (a.type === "attack" ? -1 : 1));
-    const chosen = candidates[0];
-    chosen.value = Math.min(3, chosen.value + boost);
-    msg(g, "Усилен резерв: " + DIE_SYMBOL[chosen.type] + chosen.value + ".");
-  }
-  if (hit) launch(g, turn.side, action.targetId, hit);
-  else nextTurn(g);
-  return g;
-}
-function candidates(dice, types, minSum = 0) {
-  const sorted = [...dice].sort((a, b) => a.value - b.value);
-  if (types.length === 1) return sorted.filter(d => d.type === types[0] && d.value >= minSum).map(d => [d]);
-  const out = [];
-  for (let i = 0; i < sorted.length; i++) for (let j = i + 1; j < sorted.length; j++) {
-    if (types.length === 2) {
-      const pair = [sorted[i], sorted[j]];
-      if (typesAre(pair, types) && pair[0].value + pair[1].value >= minSum) out.push(pair);
-    } else for (let k = j + 1; k < sorted.length; k++) {
-      const triple = [sorted[i], sorted[j], sorted[k]];
-      if (typesAre(triple, types) && triple.reduce((s, d) => s + d.value, 0) >= minSum) out.push(triple);
-    }
-  }
-  out.sort((a, b) => a.reduce((s, d) => s + d.value, 0) - b.reduce((s, d) => s + d.value, 0));
-  return out;
-}
-export function aiDraftChoice(g) {
-  const cards = g.fleets.B.hand;
-  const n = g.round === 1 ? 3 : 1;
-  const score = c => c.dice.reduce((s, v) => s + (v === "attack" ? 3 : v === "defense" ? 1.5 : 2), 0);
-  return [...cards].sort((a, b) => score(b) - score(a)).slice(0, n).map(c => c.id);
-}
-export function aiReactionChoice(g) {
-  if (g.phase !== "react") return null;
-  const options = g.fleets.B.dice.filter(d => d.type === "defense");
-  const want = g.pending?.damage || 0;
-  const efficient = [...options].sort((a, b) => Math.abs(a.value - want) - Math.abs(b.value - want))[0];
-  return (want > 1 && efficient) ? efficient.id : null;
+export function aiDraftChoice(g,side=g.drafting) {
+ // Evaluate only public board and the AI's own hand/pool, never the opponent's sealed choice.
+ const fleet=g.fleets[side],dice=availableDice(g,side);
+ const totals=Object.fromEntries(Object.keys(DIE_SYMBOL).map(type=>[type,dice.filter(d=>d.type===type).reduce((n,d)=>n+d.value,0)]));
+ function score(card){const effect=card.abilities[0],estimated={...totals};
+  if(["attack","defense","tech"].includes(effect.effect))estimated[effect.effect]+=effect.amount*2;
+  if(effect.effect==="mixed"){estimated.attack+=effect.amount;estimated.defense+=effect.amount;}
+  const readiness=aliveUnits(fleet).reduce((n,u)=>n+UNIT_TYPES[u.role].abilities.reduce((s,a,i)=>s+(Object.entries(a.cost).every(([type,value])=>estimated[type]>=value)?(i?4:2):0),0),0);
+  return readiness+(effect.effect==="initiative"?1.5:effect.effect==="attack"?1:0);
+ }
+ return [...fleet.hand].filter(c=>c.timing==="tactic").sort((a,b)=>score(b)-score(a)).slice(0,1).map(c=>c.id);
 }
 export function aiActionChoice(g) {
-  const turn = turnOf(g);
-  if (!turn || turn.side !== "B") return null;
-  const f = g.fleets.B, role = turn.role, d = f.dice;
-  const enemy = aliveUnits(g.fleets.A);
-  if (!enemy.length) return { kind: "pass", diceIds: [] };
-  const target = [...enemy].sort((a, b) => a.hp - b.hp || b.initiative - a.initiative)[0];
-  const patterns = {
-    interceptor: [["attack"], 2],
-    frigate: [["defense"], 2],
-    dreadnought: [["attack", "attack", "tech"], 6],
-  };
-  const priority = patterns[role];
-  const special = priority ? candidates(d, priority[0], priority[1])[0] : null;
-  if (special && !g.specialUsed.B.includes(turn.id) && (role !== "frigate" || f.shield < 3)) return { kind: "special", diceIds: special.map(x => x.id), targetId: target.id };
-  const shot = candidates(d, ["attack"], 0)[0];
-  if (shot) return { kind: "fire", diceIds: shot.map(x => x.id), targetId: target.id };
-  const shield = candidates(d, ["defense"], 0)[0];
-  if (shield && f.shield < 5) return { kind: "brace", diceIds: shield.map(x => x.id) };
-  const tech = candidates(d, ["tech"], 0)[0];
-  if (tech && d.some(x => x.id !== tech[0].id && x.value < 3)) return { kind: "tune", diceIds: tech.map(x => x.id) };
-  return { kind: "pass", diceIds: [] };
+ const t=turnOf(g);if(!t)return null;const enemies=aliveUnits(g.fleets[other(t.side)]).sort((a,b)=>a.hp-b.hp||b.glory-a.glory);if(!enemies.length)return {kind:"pass"};
+ for(const field of [1,0]) {const a=UNIT_TYPES[t.role].abilities[field];const p=findPayment(availableDice(g,t.side),a.cost);if(p)return {kind:"ability",ability:field,diceIds:p.map(d=>d.id),targetId:enemies[0].id,allyId:t.id,dieId:availableDice(g,t.side).sort((a,b)=>a.value-b.value)[0]?.id,dieType:"attack"};}
+ return {kind:"pass"};
+}
+export function aiStep(g) {
+ if(g.phase==="draft")return chooseCards(g,aiDraftChoice(g));
+ if(g.phase==="react") {const side=g.pending.defender,c=g.fleets[side].hand.find(c=>c.timing==="defense");return c?playReaction(g,side,c.id):resolveReaction(g);}
+ if(g.phase==="activate") {
+  const side=turnOf(g).side;const c=g.fleets[side].hand.find(c=>c.timing==="activation");
+  if(c&&!g.fleets[side].extraUsed){const next=playReaction(g,side,c.id,0,[],turnOf(g).id);if(next!==g)return next;}
+  return tryAction(g,aiActionChoice(g));
+ }
+ return g;
 }

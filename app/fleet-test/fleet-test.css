@@ -209,9 +209,6 @@
 .ftShipEffect{font-size:12px;line-height:1.3;color:#efebea;white-space:normal;overflow-wrap:anywhere}
 .ftShipModule{font-size:10px;color:#aec8de;line-height:1.3;margin-top:auto}
 .ftBattlefieldHint{margin:10px 0 0!important;color:#f5d49b!important;font-size:12px}
-.ftQueueRtl{direction:rtl;justify-content:flex-start}
-.ftQueueRtl .ftQueueChip{direction:ltr;text-align:left}
-.ftTimeline .ftQueueRtl{overflow-x:auto}
 .ftRoot .ftBattlefieldSlot .ftShip:disabled:not(.ftDead){opacity:1;color:#f8f4ed;cursor:default}
 .ftRoot .ftBattlefieldSlot .ftShip.ftDead{opacity:.36;filter:grayscale(1)}
 .ftRoot .ftBattlefieldSlot .ftShip.ftTarget{outline:3px solid #f49a90;outline-offset:-3px}
@@ -227,4 +224,254 @@
   .ftBattlefieldColumn{flex-basis:212px;grid-template-rows:365px 46px 365px}
   .ftShipSpecial{padding:6px}
   .ftShipSpecialHead{flex-wrap:wrap}
+}
+/* v0.4: reuse the original portrait cards, with own dice and two ability fields. */
+.ftBattlefieldColumn{grid-template-rows:470px 48px 470px}
+.ftBattlefieldSlot .ftShipImage{height:110px;min-height:110px;flex-basis:110px}
+.ftBattlefieldSlot .ftShipText{gap:5px}
+.ftDualAbilities{display:grid;gap:6px;margin-top:auto}
+.ftAbilityField{display:flex;flex-direction:column;gap:3px;padding:8px;border:1px solid #bd975683;border-radius:8px;background:#f0c47c15;min-height:80px}
+.ftAbilityField small{font-size:10px;color:#f2c784}.ftAbilityField strong{font-size:13px}.ftAbilityField span{font-size:12px;line-height:1.3}
+.ftShipDice{display:flex;gap:5px}.ftShipDice>span{border:1px solid #9eabcb;border-radius:5px;padding:3px 6px;background:#293b57;font-size:13px}
+.ftShipDice .ftExhausted{opacity:.4;text-decoration:line-through}.ftShipDice .ftBurned{opacity:.4;color:#ff978e;text-decoration:line-through}
+.ftDicePicker{display:flex;flex-wrap:wrap;gap:7px}.ftDicePicker .ftDie{display:flex;flex-direction:column;align-items:center;min-width:74px;font-size:20px}.ftDie small{font-size:9px}
+.ftRoot .ftPicked{outline:2px solid #f7cd7d;background:#64513e}.ft-attack{color:#ffa99c}.ft-defense{color:#a8dcf0}.ft-tech{color:#dcb5ff}
+.ftTactics{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.ftTactic{padding:10px;border:1px solid #827591;border-radius:10px;background:#19243b}
+.ftTactic h3{margin-top:0}.ftTactic>button,.ftDualActions>button{display:flex;flex-direction:column;gap:5px;text-align:left;width:100%;margin-top:8px;padding:12px}.ftTactic>button small,.ftDualActions small{font-size:10px;color:#f1c985}.ftTactic>button span,.ftDualActions span{font-size:12px;line-height:1.4}
+.ftDualActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.ftDualActions strong{font-size:15px}
+@media(max-width:760px){.ftBattlefieldColumn{grid-template-rows:470px 48px 470px}.ftDualActions{grid-template-columns:1fr}}
+/* Match the base game's bevelled dice and framed portrait cards. */
+.ftRoot{max-width:1600px}
+.ftScaleTools{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.ftScaleTools label{display:flex;align-items:center;gap:7px;font-size:12px}.ftScaleTools input{width:130px;accent-color:#e7c17a}.ftScaleTools output{min-width:38px;font:700 12px ui-monospace,monospace}.ftScaleTools button{min-height:34px;padding:6px 10px;font-size:12px}.ftScaleTools button[aria-pressed=true]{border-color:#edce8c;background:#4b4238}
+.ftBattlefield:fullscreen{background:#08121f;overflow:auto;border:0;border-radius:0;padding:16px;margin:0;width:100%;height:100%}
+.ftBattlefieldScroller{padding:5px 0 10px}.ftBoardStage{position:relative;margin-inline:auto;flex:none;overflow:hidden}.ftBattlefieldLine{position:absolute;right:0;top:0;min-width:0;gap:10px;transform-origin:top right}.ftBattlefieldColumn{flex:0 0 214px;grid-template-rows:390px 44px 390px;gap:6px}.ftBattlefieldAxis{min-height:44px;font-size:12px}.ftBattlefieldSlot{border-color:#29435745;background:#0b1c2c30}.ftBattlefieldSlot:not(.ftFilled){background:transparent;border-color:transparent}
+.ftRoot .ftBattlefieldSlot .ftShip{--team:#8bddf4;border:1px solid color-mix(in srgb,var(--team) 50%,#172536);border-radius:7px;background:#091521;box-shadow:0 4px #203447,0 6px #040a13,0 12px 17px #0008;overflow:hidden;display:flex;flex-direction:column;height:390px;padding:0}.ftRoot .ftBattlefieldSlot .ftShipTeamB{--team:#f0a498}
+.ftRoot .ftBattlefieldSlot .ftShipImage{height:120px;min-height:120px;flex-basis:120px}.ftShipImage img{object-position:50% 39%}.ftShipImage:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#06111c38,transparent 30%,#06111c85 62%,#06111cf5);pointer-events:none}
+.ftShipStats{position:absolute;top:6px;left:6px;z-index:1;display:flex;gap:4px}.ftShipStats span{background:#07111ee6;border:1px solid #a3bdd075;border-radius:4px;padding:2px 6px;color:#ffe0a0;font:800 12px ui-monospace,monospace}
+.ftShipPortraitTitle{position:absolute;bottom:24px;left:7px;right:7px;z-index:1;display:flex;flex-direction:column;gap:2px}.ftShipPortraitTitle b{font-size:16px;line-height:1.1;text-shadow:0 2px 4px #000}.ftShipPortraitTitle small{font-size:9px;color:var(--team)}
+.ftPortraitHp{position:absolute;bottom:5px;left:6px;right:6px;height:13px;border:1px solid #5c778b;border-radius:3px;background:#08121c;z-index:1;overflow:hidden}.ftPortraitHp i{position:absolute;height:100%;inset:0 auto 0 0;background:linear-gradient(90deg,#243e50,var(--team));opacity:.65}.ftPortraitHp span{position:relative;display:block;text-align:center;font:750 10px ui-monospace,monospace;color:white}
+.ftBattlefieldSlot .ftShipText{padding:8px;flex:1;min-height:0;gap:8px}.ftDualAbilities{margin:0;gap:6px;flex:1}.ftAbilityField{min-height:0;padding:7px;background:linear-gradient(110deg,#173042,#101d2c);border:1px solid #506a7d;border-radius:5px;gap:3px}.ftAbilityField small{color:#e9ce94;font-size:10px}.ftAbilityField strong{font-size:13px;color:#e9f4ff}.ftAbilityField span{font-size:12px;color:#c8d7e3;line-height:1.25}.ftShipStatus{width:100%;text-align:left;padding:5px 8px;border-top:1px solid #30445a;color:#bed3e6;font-size:10px}.ftCurrent .ftShipStatus{background:var(--team);color:#092032;font-weight:800}
+.ftRoot .ftCube{--die-light:#ffac94;--die-front:#a7463d;--die-edge:#57241f;position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;width:42px;min-width:42px;height:40px;min-height:40px;margin-bottom:5px;padding:0;border:1px solid var(--die-light);border-radius:6px;background:linear-gradient(148deg,var(--die-front) 12%,var(--die-edge) 93%);box-shadow:inset 1px 1px #ffffff40,0 4px var(--die-edge),0 6px 7px #0008;color:#fff;text-shadow:0 1px 3px #000}
+.ftRoot .ftCube.ft-defense{--die-light:#93e6ff;--die-front:#356d91;--die-edge:#153750}.ftRoot .ftCube.ft-tech{--die-light:#d5b5ff;--die-front:#76569a;--die-edge:#38294d}
+.ftCube:before,.ftCube:after{position:absolute;content:"";inset:0;border-radius:inherit;pointer-events:none}.ftCube:before{background:linear-gradient(100deg,var(--die-light),var(--die-front));clip-path:polygon(0 0,100% 0,83% 17%,7% 17%)}.ftCube:after{background:linear-gradient(var(--die-front),var(--die-edge));clip-path:polygon(100% 0,100% 100%,83% 86%,83% 17%)}
+.ftDieFace{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:3px;padding-right:3px;font:800 18px ui-monospace,monospace}.ftDieFace i{font-style:normal;font-size:13px}.ftRoot .ftCube.ftPicked{outline:2px solid #ffe092;outline-offset:2px;transform:translateY(-2px)}.ftRoot button.ftCube:hover{background:linear-gradient(148deg,var(--die-front),var(--die-edge));filter:brightness(1.2);transform:translateY(-3px)}
+.ftShipDice{display:flex;gap:7px;padding:1px 0 3px}.ftShipDice .ftCube{width:30px;min-width:30px;height:28px;min-height:28px;padding:0}.ftShipDice .ftDieFace{font-size:13px;gap:2px}.ftShipDice .ftDieFace i{font-size:10px}.ftShipDice .ftExhausted{opacity:.35;filter:saturate(.4)}.ftShipDice .ftBurned{opacity:.3;filter:grayscale(1)}
+.ftDiceGroups{display:grid;gap:10px;margin:12px 0}.ftDiceGroup{padding:10px 12px;background:#0c1a2a;border:1px solid #38536b;border-radius:8px}.ftDiceGroup.ft-attack{border-left:3px solid #ffac94}.ftDiceGroup.ft-defense{border-left:3px solid #93e6ff}.ftDiceGroup.ft-tech{border-left:3px solid #d5b5ff}.ftDiceGroupHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}.ftDiceGroupHead strong{font-size:13px}.ftDiceGroupHead small{font:650 11px ui-monospace,monospace}.ftDicePicker{gap:9px;align-items:center}.ftEmptyDice{font-size:12px;color:#8ea5b9}
+.ftTactic{background:linear-gradient(150deg,#172b40,#091521);border:1px solid #5e778b;border-radius:7px;box-shadow:0 4px #203447,0 7px 16px #0006}.ftTactic>button{border-radius:5px;border-color:#506a7d;background:linear-gradient(110deg,#173042,#101d2c)}
+@media(max-width:760px){.ftBattlefieldColumn{flex-basis:214px;grid-template-rows:390px 44px 390px}.ftScaleTools{width:100%}.ftScaleTools input{width:110px}.ftBattlefieldSlot .ftShipImage{height:120px;min-height:120px;flex-basis:120px}}
+/* Highest initiative is on the LEFT. Both the axis and turn queue read left to right. */
+.ftBattlefieldScroller,.ftBattlefieldLine{direction:ltr}.ftBattlefieldLine{right:auto;left:0;transform-origin:top left}
+.ftRoot .ftTop{gap:12px;margin-bottom:10px}.ftRoot .ftIntro h1{font-size:clamp(22px,2.5vw,31px)}.ftIntro p{font-size:13px;margin-bottom:0}.ftSettings{padding:9px}.ftScore{margin-bottom:9px}.ftScore>div{padding:7px 10px}.ftScore strong{font-size:18px}
+.ftBattlefield{padding:12px;background:linear-gradient(145deg,#0c1b2eea,#0a1525f5),url('/card-art/space/orbital-sector.jpg') center/cover}.ftBattlefield .ftPanelHead h2{font-size:17px}.ftBattlefieldMeta{margin-bottom:4px}.ftRoot .ftBattlefieldSlot .ftShip{cursor:zoom-in}.ftRoot .ftBattlefieldSlot .ftShip.ftTarget{cursor:crosshair}
+.ftInspectDialog{max-width:min(92vw,420px);max-height:90vh;overflow:auto;padding:16px;border:1px solid #86b5cd;border-radius:12px;background:#0b1828;color:#edf5ff;box-shadow:0 24px 90px #000b}.ftInspectDialog::backdrop{background:#020710c9;backdrop-filter:blur(4px)}.ftInspectDialog form{text-align:right}.ftInspectDialog button{cursor:pointer;background:#213951;border:1px solid #9ab1c8;border-radius:5px;color:#eef5ff;padding:7px 12px}.ftInspectDialog img{width:100%;max-height:200px;object-fit:cover;margin-top:10px;border-radius:7px}.ftInspectDialog h2{margin-bottom:4px}.ftInspectDialog .ftAbilityField{padding:12px;min-height:90px}.ftInspectDialog .ftAbilityField strong{font-size:16px}.ftInspectDialog .ftAbilityField span{font-size:14px}
+.ftPoolContribution{display:inline-flex;align-items:center;gap:3px;border:1px solid currentColor;border-radius:5px;padding:4px 7px;font:800 13px ui-monospace,monospace;background:#142537}
+.ftOpponentOverview{border-color:#a575725c}.ftOpponentOverview h3{font-size:12px;color:#c6d6e4}.ftOpponentDice{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.ftOpponentDiceType{background:#0b1b2a;border:1px solid #3f5265;border-radius:7px;padding:8px}.ftOpponentDiceType>b{display:block;font-size:12px;margin-bottom:8px}.ftOpponentDiceType .ftCube{width:30px;min-width:30px;height:28px;min-height:28px}.ftOpponentDiceType .ftDieFace{font-size:13px}.ftOpponentHand{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:8px}.ftOpenTactic{display:flex;flex-direction:column;gap:5px;padding:9px;border:1px solid #566276;border-radius:7px;background:linear-gradient(145deg,#1c2d43,#101c2d)}.ftOpenTactic>b{font-size:13px}.ftOpenTactic>small{font-size:10px}.ftOpenTactic .ftAbilityField{padding:6px}.ftOpenTactic .ftAbilityField strong{font-size:11px}.ftOpenTactic .ftAbilityField span{font-size:10px}.ftPlayedRow{display:flex;gap:8px;flex-wrap:wrap}.ftPlayedRow article{display:flex;flex-direction:column;gap:3px;flex:1 1 200px;padding:9px;background:#142337;border:1px solid #727888;border-radius:7px;font-size:12px}.ftPlayedRow small{color:#f0cd8d}.ftPlayedRow span{font-size:11px}
+@media(max-width:600px){.ftOpponentDice{grid-template-columns:1fr}.ftOpponentHand{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Abilities are controls on the ship itself; no nested card buttons. */
+.ftRoot .ftBattlefieldSlot article.ftShip{cursor:default;font:inherit}.ftRoot button.ftShipImage{position:relative;display:block;width:100%;padding:0;border:0;border-radius:0;background:#0b1624;text-align:left;cursor:zoom-in;overflow:hidden}.ftRoot .ftShipImage:hover{transform:none;filter:brightness(1.1)}.ftRoot .ftTarget .ftShipImage{cursor:crosshair}
+.ftRoot .ftAbilityField{position:relative;text-align:left}.ftRoot button.ftAbilityField{padding:7px;min-height:0;border-radius:5px;display:flex;flex-direction:column;justify-content:center;gap:3px;font:inherit;cursor:pointer}.ftAbilityField em{font-style:normal;font-size:9px;line-height:1.2;color:#91a6b8}.ftRoot .ftAbilityReady{border-color:#77bca0;background:linear-gradient(110deg,#1a413b,#122b2d);box-shadow:inset 3px 0 #7edbb2}.ftAbilityReady em{color:#a9efcc}.ftRoot .ftCurrent button.ftAbilityReady{outline:1px solid #8ddfbb;outline-offset:-2px}.ftRoot button.ftAbilityReady:hover{background:linear-gradient(110deg,#28614e,#20413c);transform:none}.ftRoot .ftAbilityArmed{outline:2px solid #ffe092!important;background:#4c492d!important}.ftRoot button.ftAbilityField:disabled{opacity:.48;cursor:not-allowed}.ftOnShipHint{display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid #72ac96;border-radius:8px;background:#17332d;color:#d1f4e4;margin:10px 0}.ftOnShipHint span{font-size:13px}
+.ftSecretChoice,.ftDamageNotice{padding:9px 12px;border:1px solid #a88b58;border-radius:7px;background:#3c322347;color:#f5d7a3!important;font-size:13px}.ftRoot .ftBattlefieldSlot article.ftShip:has(.ftShipImage[aria-label$="выбрать целью"]){cursor:crosshair}
+.ftCardBack{min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden;border:1px solid #8b789e;border-radius:8px;background:repeating-linear-gradient(45deg,#17253a 0,#17253a 8px,#22334a 8px,#22334a 10px);box-shadow:inset 0 0 0 5px #101c2f,inset 0 0 0 6px #7b6d8b,0 4px 12px #0005;color:#b9b4ce}.ftCardBack>span{font-size:30px;color:#e5cf9a;text-shadow:0 0 16px #dbc38d55}.ftCardBack b{font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.ftQuickTargets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.ftRoot .ftQuickTargets button{display:flex;gap:10px;align-items:center;min-height:92px;text-align:left;background:#382830;border:2px solid #edb28e;padding:8px}.ftQuickTargets img{width:65px;height:65px;object-fit:cover;border-radius:5px}.ftQuickTargets span{display:flex;flex-direction:column;gap:4px}.ftQuickTargets b{font-size:12px;color:#ffe2a0}.ftRoot .ftAimTarget{outline:3px dashed #f6c675;outline-offset:2px}.ftUtilityPanel{position:sticky;top:8px;z-index:12;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:2px solid #9ed9c2;background:#122b2b}.ftUtilityPanel h2{width:100%}.ftUtilityPanel label{display:flex;flex-direction:column;gap:4px}.ftUtilityPanel select{background:#182e42;color:#fff;padding:10px;border:1px solid #90acbd;border-radius:5px}
+@media(max-width:650px){.ftQuickTargets{grid-template-columns:1fr}.ftRoot .ftQuickTargets button{min-height:68px}.ftQuickTargets img{width:48px;height:48px}}
+
+
+/* Compact cockpit · 19 Nov 2026: board + hand + shared dice visible simultaneously.
+   Only /fleet-test uses these selectors; the existing main game remains unchanged. */
+.ftOpponentCompactHead{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ftOpponentCompactHead strong{font-size:12px;line-height:1.1;color:#f1d4c6}
+.ftOpponentCompactHead small,.ftOpponentHandCompact small{font-size:10px;color:#bfcde0;line-height:1.1}
+.ftOpponentHandCompact{min-width:0}
+.ftOpponentHandCompact>.ftOpponentHand{display:flex;gap:2px;flex-wrap:nowrap;overflow:hidden;margin-top:4px}
+.ftOpponentHandCompact .ftCardBack{width:14px;min-width:14px;flex:0 0 14px;min-height:34px;height:34px;border-radius:3px;box-shadow:inset 0 0 0 2px #101c2f,inset 0 0 0 3px #7b6d8b}
+.ftOpponentHandCompact .ftCardBack>span{font-size:10px}
+.ftOpponentOverview{position:relative;overflow:visible}
+.ftOpponentPlayed{position:absolute;left:7px;top:100%;z-index:20;width:min(540px,90vw);max-height:40vh;overflow:auto;background:#102135;border:1px solid #8d849c;border-radius:7px;padding:4px 8px;box-shadow:0 12px 25px #0009}
+.ftOpponentPlayed summary{cursor:pointer;color:#d6caec;font-size:11px}
+.ftOpponentPlayed:not([open]){width:auto;top:auto;bottom:0;left:8px;background:#19253a}
+.ftOpponentPlayed .ftPlayedRow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:8px}
+.ftOpponentPlayed .ftPlayedRow article{min-width:0}
+.ftDiceHelp{display:block;font-size:10px;line-height:1.2;color:#b6ccda}
+.ftHandDock{min-height:0;overscroll-behavior:contain}
+.ftHandDock>h3,.ftDiceDock>h3{margin:4px 0 3px;font-size:12px}
+.ftSidebar details>summary{cursor:pointer;padding:6px 8px;background:#1e3044;border:1px solid #557088;border-radius:7px;color:#d1e4f2;font-size:11px}
+.ftSidebar details[open]{max-height:35vh;overflow:auto}
+.ftSidebar details[open] .ftPanel{margin:5px 0 0;padding:8px}
+.ftSidebar details[open] .ftPanel h2{font-size:12px;margin-bottom:4px}
+.ftSidebar details[open] .ftQueueChip{font-size:10px;padding:3px 5px}
+.ftSidebar details[open] .ftFine{font-size:10px;margin-bottom:0}
+.ftSidebar details[open] .ftLog{max-height:110px;font-size:11px}
+
+@media (min-width:1050px) and (min-height:660px){
+  .ftRoot{width:100%;max-width:1800px;height:100dvh;min-height:0;overflow:hidden;display:flex;flex-direction:column;padding:7px 12px 8px}
+  .ftRoot:has(#demo-rules){height:auto;min-height:100dvh;overflow:visible}
+  .ftRoot:has(#demo-rules) .ftCombatDesk{min-height:660px}
+  .ftRoot .ftTop{flex:0 0 auto;display:grid;grid-template-columns:minmax(230px,.42fr) minmax(0,1fr);align-items:center;gap:8px;margin-bottom:5px}
+  .ftRoot .ftIntro p{display:none}
+  .ftRoot .ftIntro h1{font-size:clamp(18px,1.5vw,24px);line-height:1.1;margin:2px 0}
+  .ftRoot .ftBack{font-size:10px;margin:0}
+  .ftRoot .ftOverline{font-size:9px;letter-spacing:.07em}
+  .ftRoot .ftSettings{padding:5px 6px;gap:5px;justify-content:flex-end}
+  .ftRoot .ftSettings label{font-size:9px;gap:1px}
+  .ftRoot .ftSettings select,.ftRoot .ftSettings input{min-width:78px;max-width:142px;padding:5px 7px;border-radius:5px;font-size:11px;min-height:29px}
+  .ftRoot .ftSettings input{max-width:102px}
+  .ftRoot .ftSettings button{min-height:29px;padding:5px 7px;font-size:11px;border-radius:5px}
+  .ftRoot .ftScore{flex:0 0 auto;grid-template-columns:72px 1fr 1fr 96px;gap:5px;margin-bottom:6px}
+  .ftRoot .ftScore>div{padding:3px 9px;border-radius:7px;min-height:43px}
+  .ftRoot .ftScore small{font-size:9px;letter-spacing:0}
+  .ftRoot .ftScore strong{font-size:14px;line-height:1.1}
+  .ftRoot .ftScore span{font-size:10px}
+  .ftCombatDesk{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,31%);grid-template-rows:72px minmax(0,1fr);gap:6px 9px}
+  .ftCombatDesk>.ftOpponentOverview{grid-column:1;grid-row:1;margin:0;min-width:0;min-height:0;display:grid;grid-template-columns:100px minmax(0,1fr) 119px;gap:8px;align-items:center;padding:5px 8px;border-radius:9px}
+  .ftCombatDesk>.ftOpponentOverview .ftOpponentDice{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  .ftCombatDesk>.ftOpponentOverview .ftOpponentDiceType{padding:3px 5px;min-width:0}
+  .ftCombatDesk>.ftOpponentOverview .ftOpponentDiceType>b{font-size:10px;line-height:1;white-space:nowrap;margin-bottom:3px}
+  .ftCombatDesk>.ftOpponentOverview .ftDicePicker{gap:3px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
+  .ftCombatDesk>.ftOpponentOverview .ftCube{width:24px;min-width:24px;height:24px;min-height:24px;margin-bottom:0;border-radius:4px}
+  .ftCombatDesk>.ftOpponentOverview .ftDieFace{font-size:11px;gap:1px}
+  .ftCombatDesk>.ftOpponentOverview .ftDieFace i{font-size:9px}
+  .ftCombatDesk>.ftBattlefield{grid-column:1;grid-row:2;display:flex;flex-direction:column;min-width:0;min-height:0;margin:0;padding:7px;border-radius:9px}
+  .ftCombatDesk>.ftBattlefield .ftPanelHead{flex:0 0 auto;margin:0 0 2px;align-items:center}
+  .ftCombatDesk>.ftBattlefield .ftPanelHead h2{font-size:13px;margin:0}
+  .ftCombatDesk>.ftBattlefield .ftPanelHead small{font-size:9px}
+  .ftCombatDesk>.ftBattlefield .ftScaleTools button{min-height:26px;padding:3px 7px}
+  .ftCombatDesk>.ftBattlefield .ftScaleTools input{width:90px}
+  .ftCombatDesk>.ftBattlefield .ftScaleTools label{font-size:10px}
+  .ftCombatDesk>.ftBattlefield .ftBattlefieldMeta{display:none}
+  .ftCombatDesk>.ftBattlefield .ftBattlefieldScroller{flex:1;min-height:0;max-height:none;overflow:auto;padding:2px 0 4px}
+  .ftCombatDesk>.ftBattlefield .ftBattlefieldHint{flex:0 0 auto;margin:2px 0 0!important;font-size:10px;line-height:1.15}
+  .ftBattlefieldColumn{flex:0 0 172px;grid-template-rows:258px 28px 258px;gap:4px}
+  .ftBattlefieldLine{gap:8px}
+  .ftBattlefieldAxis{min-height:28px;padding:2px 5px}
+  .ftBattlefieldAxis>span{font-size:12px}
+  .ftBattlefieldAxis>strong{font-size:8px;letter-spacing:0}
+  .ftRoot .ftBattlefieldSlot .ftShip{height:258px}
+  .ftRoot .ftBattlefieldSlot .ftShipImage{height:77px;min-height:77px;flex-basis:77px}
+  .ftShipStats{top:3px;left:3px}
+  .ftShipStats span{font-size:10px;padding:1px 3px}
+  .ftShipPortraitTitle{left:5px;right:5px;bottom:19px;gap:0}
+  .ftShipPortraitTitle b{font-size:12px}
+  .ftPortraitHp{left:3px;right:3px;bottom:3px;height:12px}
+  .ftPortraitHp span{font-size:9px}
+  .ftRoot .ftBattlefieldSlot .ftShipText{padding:4px;gap:3px}
+  .ftShipDice{gap:3px;padding:0}
+  .ftPoolContribution{padding:2px 3px;font-size:10px}
+  .ftRoot .ftBattlefieldSlot .ftDualAbilities{gap:4px}
+  .ftRoot .ftBattlefieldSlot .ftAbilityField{padding:4px 5px;gap:1px}
+  .ftRoot .ftBattlefieldSlot .ftAbilityField small{font-size:9px;line-height:1.1}
+  .ftRoot .ftBattlefieldSlot .ftAbilityField strong{font-size:11px;line-height:1.1}
+  .ftRoot .ftBattlefieldSlot .ftAbilityField span{font-size:10px;line-height:1.16;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+  .ftRoot .ftBattlefieldSlot .ftAbilityField em{display:none} /* Readiness is conveyed by green highlight; full text remains in the inspect dialog. */
+  .ftRoot .ftBattlefieldSlot .ftShipStatus{padding:2px 5px;font-size:9px;line-height:1.1}
+  .ftCombatDesk>.ftColumns{grid-column:2;grid-row:1 / 3;min-width:0;min-height:0;display:flex;flex-direction:column;align-items:stretch;gap:5px;overflow:hidden}
+  .ftCombatDesk .ftGameplay{flex:1;min-height:0;overflow:hidden}
+  .ftCombatDesk .ftMainPanel{height:100%;min-height:0;margin:0;padding:8px;display:flex;flex-direction:column;gap:2px;overflow:hidden}
+  .ftCombatDesk .ftMainPanel>small{font-size:10px}
+  .ftCombatDesk .ftMainPanel>h2{font-size:14px;margin:0 0 2px;line-height:1.2}
+  .ftCombatDesk .ftMainPanel>p{font-size:10px;line-height:1.2;margin:0 0 3px}
+  .ftCombatDesk .ftMainPanel .ftNotice{padding:7px}
+  .ftCombatDesk .ftMainPanel .ftOnShipHint{padding:6px;margin:3px 0;gap:3px;max-height:116px;overflow:auto}
+  .ftCombatDesk .ftMainPanel .ftOnShipHint span{font-size:10px;line-height:1.15}
+  .ftCombatDesk .ftDiceDock{flex:0 0 auto;min-height:0}
+  .ftCombatDesk .ftDiceGroups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:4px 0}
+  .ftCombatDesk .ftDiceGroup{min-width:0;padding:4px 5px}
+  .ftCombatDesk .ftDiceGroupHead{display:flex;flex-direction:column;align-items:flex-start;gap:1px;margin-bottom:4px}
+  .ftCombatDesk .ftDiceGroupHead strong{font-size:10px;line-height:1.1}
+  .ftCombatDesk .ftDiceGroupHead small{font-size:9px}
+  .ftCombatDesk .ftDiceGroup .ftDicePicker{gap:5px 3px;min-height:30px;max-height:68px;overflow-y:auto;scrollbar-width:thin}
+  .ftCombatDesk .ftDiceGroup button.ftCube{width:30px;min-width:30px;height:28px;min-height:28px;margin-bottom:2px;padding:0}
+  .ftCombatDesk .ftDiceGroup .ftDieFace{font-size:12px;gap:1px}
+  .ftCombatDesk .ftDiceGroup .ftDieFace i{font-size:9px}
+  .ftCombatDesk .ftDiceActions{margin:3px 0;padding:0;font-size:10px;gap:5px}
+  .ftCombatDesk .ftDiceActions button{min-height:25px;padding:3px 7px;font-size:10px}
+  .ftCombatDesk .ftHandDock{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin}
+  .ftCombatDesk .ftHandDock .ftTargetPicker{display:flex;align-items:center;gap:4px;font-size:10px}
+  .ftCombatDesk .ftHandDock .ftTargetPicker select{min-height:26px}
+  .ftCombatDesk .ftTactics{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;align-content:start}
+  .ftCombatDesk .ftTactic{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto auto 1fr;gap:3px;padding:5px;min-width:0;box-shadow:none}
+  .ftCombatDesk .ftTactic h3{grid-column:1/-1;font-size:11px;line-height:1.12;margin:0}
+  .ftCombatDesk .ftTactic>small{grid-column:1/-1;font-size:8px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+  .ftCombatDesk .ftTactic>button{margin:0;padding:4px;gap:2px;min-height:57px;text-align:left;border-radius:4px}
+  .ftCombatDesk .ftTactic>button small{font-size:8px;line-height:1.1}
+  .ftCombatDesk .ftTactic>button strong{font-size:10px;line-height:1.15}
+  .ftCombatDesk .ftTactic>button span{font-size:9px;line-height:1.12;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .ftCombatDesk .ftTurnActions{margin:3px 0 0;flex:0 0 auto}
+  .ftCombatDesk .ftTurnActions button{min-height:32px;padding:5px 8px;font-size:11px}
+  .ftCombatDesk .ftSidebar{flex:0 0 auto}
+  .ftCombatDesk .ftUtilityPanel{position:absolute;z-index:30;grid-column:1;grid-row:2;left:10px;top:84px;max-width:min(560px,70%);margin:0;box-shadow:0 15px 34px #000b}
+  .ftCombatDesk .ftQuickTargets{display:flex;gap:4px;overflow-x:auto}
+  .ftCombatDesk .ftQuickTargets button{min-width:145px;min-height:55px;padding:4px;gap:4px}
+  .ftCombatDesk .ftQuickTargets img{width:38px;height:38px}
+  .ftCombatDesk .ftQuickTargets small,.ftCombatDesk .ftQuickTargets b{font-size:9px}
+}
+@media (max-width:1049px), (max-height:659px){
+  .ftRoot{height:auto;min-height:100dvh;overflow:visible}
+  .ftCombatDesk{display:flex;flex-direction:column;gap:8px;min-height:0}
+  .ftCombatDesk>.ftOpponentOverview{display:grid;grid-template-columns:105px minmax(0,1fr) 125px;align-items:center;gap:5px;padding:7px;margin:0}
+  .ftCombatDesk>.ftOpponentOverview .ftOpponentDice{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  .ftCombatDesk>.ftOpponentOverview .ftOpponentDiceType{padding:4px}
+  .ftCombatDesk>.ftOpponentOverview .ftOpponentDiceType>b{font-size:10px}
+  .ftCombatDesk>.ftOpponentOverview .ftDicePicker{gap:2px;overflow-x:auto;flex-wrap:nowrap}
+  .ftCombatDesk>.ftOpponentOverview .ftCube{width:26px;min-width:26px;height:26px;min-height:26px}
+  .ftCombatDesk>.ftOpponentOverview .ftDieFace{font-size:11px}
+  .ftCombatDesk>.ftBattlefield{height:min(60dvh,600px);min-height:320px;display:flex;flex-direction:column;margin:0}
+  .ftCombatDesk>.ftBattlefield .ftBattlefieldScroller{flex:1;min-height:0;overflow:auto}
+  .ftCombatDesk>.ftColumns{display:flex;flex-direction:column;gap:8px}
+  .ftCombatDesk .ftMainPanel{display:flex;flex-direction:column;gap:4px}
+  .ftCombatDesk .ftDiceGroups{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ftCombatDesk .ftHandDock{max-height:none;overflow:visible}
+  .ftCombatDesk .ftTactics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ftCombatDesk .ftTactic>button{margin-top:4px;padding:7px}
+  .ftCombatDesk .ftUtilityPanel{position:sticky;top:5px;z-index:20;max-width:100%;margin:0}
+}
+@media (max-width:600px){
+  .ftCombatDesk>.ftOpponentOverview{grid-template-columns:minmax(0,1fr) minmax(0,2fr);height:auto}
+  .ftCombatDesk>.ftOpponentOverview .ftOpponentHandCompact{grid-column:1/-1}
+  .ftCombatDesk .ftTactics{grid-template-columns:1fr}
+}
+
+/* Unambiguous ownership of every defensive reaction and resolved hit. */
+.ftReactionIdentity{display:flex;flex-direction:column;gap:4px;padding:9px 11px;margin:4px 0;border:2px solid #d5a76c;border-radius:8px;background:#3f2b26;color:#fff1d9}
+.ftReactionIdentity strong{font-size:13px;line-height:1.2}
+.ftReactionIdentity span{font-size:12px;line-height:1.2}
+.ftReactionIdentity small{font-size:11px;color:#ffdbb6;line-height:1.25}
+.ftHitResult{border-color:#8cc4af!important;background:#173e39!important;color:#d9f4ec!important}
+.ftHitResult b{color:#fff2ce}
+@media (min-width:1050px) and (min-height:660px){
+ .ftCombatDesk .ftReactionIdentity{padding:6px 8px;gap:2px;margin:3px 0}
+ .ftCombatDesk .ftReactionIdentity strong{font-size:12px}
+ .ftCombatDesk .ftReactionIdentity span,.ftCombatDesk .ftReactionIdentity small{font-size:10px}
+}
+
+/* Resolved-hit history stays readable while the AI proceeds to its own turn. */
+.ftHitHistory{padding:5px 8px;margin:3px 0;background:#10293c;border:1px solid #486a80;border-radius:7px;color:#e0edf8}
+.ftHitHistory>strong{display:block;font-size:10px;color:#f2d69e;margin-bottom:2px}
+.ftHitHistory>div{display:flex;flex-wrap:wrap;gap:4px 9px}
+.ftHitHistory span{font-size:10px;line-height:1.25;white-space:normal}
+@media (min-width:1050px) and (min-height:660px){
+  .ftCombatDesk .ftHitHistory{padding:3px 6px;margin:2px 0}
+  .ftCombatDesk .ftHitHistory>div{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
+  .ftCombatDesk .ftHitHistory span{white-space:nowrap;flex:none;font-size:9px}
+}
+
+
+/* Phase-by-phase instruction + short visible action feed (AI and human). */
+.ftPhaseGuide{display:flex;flex-direction:column;gap:3px;padding:7px 9px;border:1px solid #7da9a0;border-left:4px solid #9be3c3;background:#183a39;border-radius:7px}
+.ftPhaseGuide strong{font-size:12px;line-height:1.2;color:#e9fff6}
+.ftPhaseGuide span{font-size:11px;line-height:1.3;color:#cfe4e2}
+.ftPhaseGuide.ftPhaseAI{border-color:#ae8a5e;border-left-color:#ffcd7a;background:#372e27}
+.ftPhaseGuide.ftPhaseAI strong{color:#ffe6b5}
+.ftPhaseGuide.ftPhaseAI span{color:#eddccb}
+.ftTurnFeed{display:flex;flex-direction:column;gap:3px;padding:5px 8px;border:1px solid #577286;border-radius:6px;background:#10273c;min-height:0;max-height:85px;overflow:auto;scrollbar-width:thin}
+.ftTurnFeed>small{font-size:10px;font-weight:800;color:#f4cc84}
+.ftTurnFeed>div{font-size:10px;color:#d7e3f0;line-height:1.2;white-space:normal}
+.ftShipDiceLabel{font-size:8px!important;line-height:1!important;color:#b9c9d8!important;letter-spacing:.03em;align-self:center}
+.ftRoot .ftShipDice{align-items:center;flex-wrap:wrap}
+@media (min-width:1050px) and (min-height:660px){
+ .ftCombatDesk .ftPhaseGuide{padding:5px 7px;gap:2px}
+ .ftCombatDesk .ftPhaseGuide strong{font-size:11px}
+ .ftCombatDesk .ftPhaseGuide span{font-size:10px;line-height:1.16}
+ .ftCombatDesk .ftTurnFeed{flex:0 0 auto;max-height:58px;padding:4px 6px;gap:1px}
+ .ftCombatDesk .ftTurnFeed>div{font-size:9px;line-height:1.18}
+ .ftCombatDesk .ftShipDiceLabel{font-size:7px!important}
 }
