@@ -7,7 +7,24 @@ function activeSide(game) {
  return game.phase==="draft"?game.drafting:game.phase==="react"?game.pending?.defender:turnOf(game)?.side;
 }
 function humanMayAct(game) {return game.mode!=="solo"||activeSide(game)==="A";}
-function AbilityFields({abilities,pool,canUse=false,onUse,armed=null}) {return <div className="ftDualAbilities">{abilities.map((a,i)=>{const ready=pool!==undefined&&canPay(pool,a.cost),Tag=canUse?"button":"div";return <Tag className={"ftAbilityField"+(ready?" ftAbilityReady":"")+(canUse&&armed===i?" ftAbilityArmed":"")} key={a.name} {...(canUse?{type:"button",disabled:!ready,"aria-pressed":armed===i,onClick:()=>onUse(i)}:{})}><small>{i===0?"БАЗОВАЯ":"УСИЛЕННАЯ"} · {costText(a.cost)||"Без оплаты"}</small><strong>{a.name}</strong><span>{a.text}</span>{pool!==undefined&&<em>{canUse&&armed===i?"Выбери цель ↑":ready?canUse?"Нажми, чтобы применить":"Доступна по пулу":"Недостаточно суммы в пуле"}</em>}</Tag>;})}</div>;}
+function PhaseGuide({game,ai,turn,armedAbility}) {
+ let title,detail;
+ if(game.phase==="draft") {
+  title=ai?"Ход ИИ · выбор тактики":"Ваш выбор · одна тактика";
+  detail=ai?"Компьютер выбирает одну из двух способностей одной карты. Дождитесь раскрытия.":"Выберите ОДНУ способность ОДНОЙ карты из руки или нажмите «Пропустить». Затем начнутся активации кораблей.";
+ }else if(game.phase==="react"){
+  title=ai?"Ход ИИ · защита":"Ваш ход · защита от удара";
+  detail=ai?"Компьютер защищает свой корабль. Карты и «Принять удар» — его решение, ждите.":"Вас атаковали: выберите защитную карту из руки или нажмите «Принять удар». Щиты поглотят остаток урона.";
+ }else if(game.phase==="activate"){
+  const ship=UNIT_TYPES[turn.role].name;
+  title=ai?"Ход ИИ · "+ship:"Ваш ход · "+ship;
+  detail=ai?"Компьютер выбирает одну способность корабля"+(turn.extra?" (дополнительная активация по карте).":"."):"Нажмите ОДНУ доступную способность на подсвеченном корабле"+(armedAbility!==null?", затем выберите цель.":", либо «Пропустить активацию». Карта из руки не обязательна.");
+ }else{
+  title="Бой завершён";detail="Итоги после трёх раундов.";
+ }
+ return <div className={"ftPhaseGuide"+(ai?" ftPhaseAI":"")} role="status"><strong>{title}</strong><span>{detail}</span></div>;
+}
+function AbilityFields({abilities,pool,canUse=false,onUse,armed=null}) {return <div className="ftDualAbilities">{abilities.map((a,i)=>{const meets=pool!==undefined&&canPay(pool,a.cost),ready=canUse&&meets,Tag=canUse?"button":"div";return <Tag className={"ftAbilityField"+(ready?" ftAbilityReady":"")+(canUse&&armed===i?" ftAbilityArmed":"")} key={a.name} {...(canUse?{type:"button",disabled:!ready,"aria-pressed":armed===i,onClick:()=>onUse(i)}:{})}><small>{i===0?"БАЗОВАЯ":"УСИЛЕННАЯ"} · {costText(a.cost)||"Без оплаты"}</small><strong>{a.name}</strong><span>{a.text}</span>{pool!==undefined&&<em>{canUse&&armed===i?"Выбери цель ↑":ready?"Нажми, чтобы применить":meets?"Сумма позволяет; способность не активирована":"Недостаточно суммы в пуле"}</em>}</Tag>;})}</div>;}
 const DIE_ORDER = ["attack", "defense", "tech"];
 const DIE_NAMES = {attack:"Атака",defense:"Защита",tech:"Технологии"};
 function sortedDice(dice) {return [...dice].sort((a,b)=>DIE_ORDER.indexOf(a.type)-DIE_ORDER.indexOf(b.type)||b.value-a.value||a.id.localeCompare(b.id));}
@@ -16,9 +33,9 @@ function Ship({unit,side,current,target,queued,acted,pool,onClick,canTarget,onIn
  const data=UNIT_TYPES[unit.role];
 
  return <article onClick={canTarget&&unit.hp>0?onClick:undefined} aria-label={data.name+", инициатива "+unit.initiative} className={"ftShip ftShipTeam"+side+(unit.hp<=0?" ftDead":"")+(current?" ftCurrent":"")+(target?" ftTarget":"")+(canTarget&&armed!==null?" ftAimTarget":"")}>
-  <button type="button" className="ftShipImage" onClick={e=>{e.stopPropagation();if(canTarget&&unit.hp>0)onClick();else onInspect(unit);}} aria-label={data.name+(canTarget?", выбрать целью":", открыть карточку")}><img src={data.art} alt="" loading="lazy"/><div className="ftShipStats"><span>⚡ {displayInitiative}</span><span>★ {unit.glory}</span></div><div className="ftShipPortraitTitle"><b>{data.name}</b><small>{name(side)}</small></div><div className="ftPortraitHp"><i style={{width:100*unit.hp/unit.maxHp+"%"}}/><span>{unit.hp}/{unit.maxHp} HP · 🛡{unit.shield||0}</span></div></button>
+  <button type="button" className="ftShipImage" onClick={e=>{e.stopPropagation();if(canTarget&&unit.hp>0)onClick();else onInspect(unit);}} aria-label={data.name+(canTarget?", выбрать целью":", открыть карточку")}><img src={data.art} alt="" loading="lazy"/><div className="ftShipStats"><span>⚡ {displayInitiative}</span><span>★ {unit.glory}</span></div><div className="ftShipPortraitTitle"><b>{data.name}</b><small>{name(side)}</small></div><div className="ftPortraitHp"><i style={{width:100*unit.hp/unit.maxHp+"%"}}/><span>{unit.hp}/{unit.maxHp} HP · личн. щит {unit.shield||0}</span></div></button>
   <div className="ftShipText">
-   <div className="ftShipDice" aria-label="Даёт кубы в общий пул">{DIE_ORDER.filter(type=>data.dice.includes(type)).map(type=><span className={"ftPoolContribution ft-"+type} key={type} title={DIE_NAMES[type]+": бросить в общий пул"}>{DIE_SYMBOL[type]} ×{data.dice.filter(t=>t===type).length}</span>)}</div>
+   <div className="ftShipDice" aria-label="Даёт кубы в общий пул"><small className="ftShipDiceLabel">БРОСОК</small>{DIE_ORDER.filter(type=>data.dice.includes(type)).map(type=><span className={"ftPoolContribution ft-"+type} key={type} title={DIE_NAMES[type]+": бросить в общий пул"}>{DIE_SYMBOL[type]} ×{data.dice.filter(t=>t===type).length}</span>)}</div>
 
    <AbilityFields abilities={data.abilities} pool={unit.hp>0?pool:[]} canUse={canUse} onUse={onUse} armed={armed}/>
   </div>
@@ -85,7 +102,7 @@ export default function FleetTestPage() {
  const viewSide=game.mode==="solo"?"A":side||"A";
  const totals=Object.keys(DIE_SYMBOL).map(type=>DIE_SYMBOL[type]+picked.filter(d=>d.type===type).reduce((s,d)=>s+d.value,0)).join(" · ");
  useEffect(()=>{if(window.location.hash.includes("rules"))setRules(true);},[]);
- useEffect(()=>{if(!ai||rules)return;const timer=setTimeout(()=>{setGame(g=>g.mode==="solo"&&activeSide(g)==="B"?aiStep(g):g);setSelected([]);setError("");},220);return ()=>clearTimeout(timer);},[game,ai,rules]);
+ useEffect(()=>{if(!ai||rules)return;const timer=setTimeout(()=>{setGame(g=>g.mode==="solo"&&activeSide(g)==="B"?aiStep(g):g);setSelected([]);setError("");},750);return ()=>clearTimeout(timer);},[game,ai,rules]);
  function update(next){if(!humanMayAct(game))return;if(next===game){setError("Не хватает выбранных кубов нужного типа или карта недоступна в этот момент.");return;}setGame(next);setSelected([]);setUtility(null);setArmedAbility(null);setError("");}
  function toggle(id){setSelected(v=>v.includes(id)?v.filter(d=>d!==id):[...v,id]);}
  function reset(repeat=false){const next=repeat?createGame(seed,mode,defender,game.scenario):newBattle(mode,defender);setSeed(next.seed);setGame(next);setUtility(null);setArmedAbility(null);setSelected([]);setTarget("");setExtraTarget("");setError("");}
@@ -107,11 +124,12 @@ export default function FleetTestPage() {
    {game.phase==="done"?<section className="ftPanel ftMainPanel"><small>ТРИ РАУНДА ЗАВЕРШЕНЫ</small><h2>Победитель — {name(game.winner)}</h2><div className="ftOutcomeScores">{["A","B"].map(s=><div key={s}><b>{name(s)}</b><strong>★ {victoryPoints(game.fleets[s])}</strong><span>Выжило: {aliveUnits(game.fleets[s]).length}</span></div>)}</div><p>{game.result.kind==="defender"?"Сила равна: преимущество у обороняющегося.":"Сравнивается только сила выживших кораблей, без остатка HP."}</p><button onClick={()=>reset()}>Сыграть ещё раз</button></section>:<section className="ftPanel ftMainPanel">
     <small>{name(side)}{ai?" · КОМПЬЮТЕР":""}</small>
     <h2>{game.phase==="draft"?"Одна тактика на этот раунд":game.phase==="react"?"Защитная реакция":UNIT_TYPES[turn.role].name+(turn.extra?" · вторая активация":" · собственная активация")}</h2>
-    {game.phase==="draft"&&<p>Выбери одну тактику взакрытую или пропусти. Обе карты раскроются и применятся только после выбора второго игрока. Все живые корабли получают ход.</p>}
+    <PhaseGuide game={game} ai={ai} turn={turn} armedAbility={armedAbility}/>
     {game.phase==="react"&&<div className="ftReactionIdentity" role="status"><strong>{name(game.pending.attacker)} атакует → {name(game.pending.defender)} защищается</strong><span>Цель: {UNIT_TYPES[game.fleets[game.pending.defender].units.find(u=>u.id===game.pending.target)?.role]?.name||"корабль"} · Входящий урон: {game.pending.damage}</span><small>{ai?"Защитной картой распоряжается компьютер. Ничего нажимать не нужно.":"Вы защищаетесь: сыграйте карту или нажмите «Принять удар»."}</small></div>}
-    {ai?<p className="ftNotice">Компьютер выбирает действие…</p>:<>
-     {game.phase==="activate"&&<div className="ftOnShipHint" role="status"><b>{armedAbility!==null?"Выбери цель на верхнем ряду": "Способности — прямо на активном корабле"}</b><span>{armedAbility!==null?UNIT_TYPES[turn.role].abilities[armedAbility].name+": нажми корабль противника для применения.":"Зелёным выделены способности, для которых хватает суммы общего пула. Нажми нужную способность на карточке корабля."}</span>{armedAbility!==null&&<><label className="ftTargetPicker">Цель<select aria-label="Цель урона" value={targetId} onChange={e=>setTarget(e.target.value)}>{enemies.map(u=><option key={u.id} value={u.id}>{UNIT_TYPES[u.role].name} · {u.hp} HP</option>)}</select></label><button className="ftPrimary" disabled={!targetId} onClick={()=>selectShipTarget(targetId)}>Атаковать выбранную цель</button><button onClick={()=>setArmedAbility(null)}>Отменить выбор способности</button></>}</div>}
-     <div className="ftDiceDock"><h3>Общий пул кубов</h3><small className="ftDiceHelp">Способности проверяют общую сумму. Выбор кубов нужен только для сжигания.</small>
+    <div className="ftTurnFeed" aria-label="Последние действия флотов"><small>Ход боя</small>{game.log.slice(0,3).map((entry,i)=><div key={i}>{entry}</div>)}</div>
+    {ai?<p className="ftNotice">Действует компьютер — дождитесь вашего хода.</p>:<>
+     {game.phase==="activate"&&armedAbility!==null&&<div className="ftOnShipHint" role="status"><b>Выбери цель на верхнем ряду</b><span>{armedAbility!==null?UNIT_TYPES[turn.role].abilities[armedAbility].name+": нажми корабль противника для применения.":"Зелёным выделены способности, для которых хватает суммы общего пула. Нажми нужную способность на карточке корабля."}</span>{armedAbility!==null&&<><label className="ftTargetPicker">Цель<select aria-label="Цель урона" value={targetId} onChange={e=>setTarget(e.target.value)}>{enemies.map(u=><option key={u.id} value={u.id}>{UNIT_TYPES[u.role].name} · {u.hp} HP</option>)}</select></label><button className="ftPrimary" disabled={!targetId} onClick={()=>selectShipTarget(targetId)}>Атаковать выбранную цель</button><button onClick={()=>setArmedAbility(null)}>Отменить выбор способности</button></>}</div>}
+     <div className="ftDiceDock"><h3>Общий пул кубов (не щиты!)</h3><small className="ftDiceHelp">🛡 здесь — кубы для порогов способностей, а не защита HP. Настоящие щиты показаны на корабле возле HP. Выделение кубов нужно только для сжигания.</small>
      <div className="ftDiceGroups">{DIE_ORDER.map(type=>{const group=dice.filter(d=>d.type===type);return <section className={"ftDiceGroup ft-"+type} key={type} aria-label={DIE_NAMES[type]+": кубы по убыванию"}><div className="ftDiceGroupHead"><strong>{DIE_SYMBOL[type]} {DIE_NAMES[type]}</strong><small>{group.length} куб. · Σ {group.reduce((n,d)=>n+d.value,0)}</small></div><div className="ftDicePicker">{group.length?group.map(d=><button key={d.id} aria-label={DIE_NAMES[type]+" "+d.value} aria-pressed={selected.includes(d.id)} onClick={()=>toggle(d.id)} className={"ftCube ft-"+d.type+(selected.includes(d.id)?" ftPicked":"")} title={d.source?UNIT_TYPES[fleet.units.find(u=>u.id===d.source).role].name:"Куб тактики на этот раунд"}><DieFace type={d.type} value={d.value}/></button>):<span className="ftEmptyDice">Нет кубов</span>}</div></section>;})}</div><div className="ftActions ftDiceActions"><span>Выбрано: {totals}</span><button onClick={()=>setSelected([])}>Снять выбор</button></div></div>
      <div className="ftHandDock">
      {game.phase==="activate"&&cards.length>0&&<label className="ftTargetPicker">Вторая активация для<select aria-label="Корабль для второй активации" value={extraId} onChange={e=>setExtraTarget(e.target.value)}>{aliveUnits(fleet).map(u=><option key={u.id} value={u.id}>{UNIT_TYPES[u.role].name}</option>)}</select></label>}
