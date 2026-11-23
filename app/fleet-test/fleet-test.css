@@ -453,3 +453,25 @@
   .ftCombatDesk .ftHitHistory>div{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
   .ftCombatDesk .ftHitHistory span{white-space:nowrap;flex:none;font-size:9px}
 }
+
+
+/* Phase-by-phase instruction + short visible action feed (AI and human). */
+.ftPhaseGuide{display:flex;flex-direction:column;gap:3px;padding:7px 9px;border:1px solid #7da9a0;border-left:4px solid #9be3c3;background:#183a39;border-radius:7px}
+.ftPhaseGuide strong{font-size:12px;line-height:1.2;color:#e9fff6}
+.ftPhaseGuide span{font-size:11px;line-height:1.3;color:#cfe4e2}
+.ftPhaseGuide.ftPhaseAI{border-color:#ae8a5e;border-left-color:#ffcd7a;background:#372e27}
+.ftPhaseGuide.ftPhaseAI strong{color:#ffe6b5}
+.ftPhaseGuide.ftPhaseAI span{color:#eddccb}
+.ftTurnFeed{display:flex;flex-direction:column;gap:3px;padding:5px 8px;border:1px solid #577286;border-radius:6px;background:#10273c;min-height:0;max-height:85px;overflow:auto;scrollbar-width:thin}
+.ftTurnFeed>small{font-size:10px;font-weight:800;color:#f4cc84}
+.ftTurnFeed>div{font-size:10px;color:#d7e3f0;line-height:1.2;white-space:normal}
+.ftShipDiceLabel{font-size:8px!important;line-height:1!important;color:#b9c9d8!important;letter-spacing:.03em;align-self:center}
+.ftRoot .ftShipDice{align-items:center;flex-wrap:wrap}
+@media (min-width:1050px) and (min-height:660px){
+ .ftCombatDesk .ftPhaseGuide{padding:5px 7px;gap:2px}
+ .ftCombatDesk .ftPhaseGuide strong{font-size:11px}
+ .ftCombatDesk .ftPhaseGuide span{font-size:10px;line-height:1.16}
+ .ftCombatDesk .ftTurnFeed{flex:0 0 auto;max-height:58px;padding:4px 6px;gap:1px}
+ .ftCombatDesk .ftTurnFeed>div{font-size:9px;line-height:1.18}
+ .ftCombatDesk .ftShipDiceLabel{font-size:7px!important}
+}
