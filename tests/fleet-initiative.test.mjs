@@ -184,3 +184,76 @@ test('successive resolved hits stay attributed to the right fleets even when nex
  assert.equal(g.hitHistory[1].defender,'B');
  assert.equal(g.hitHistory[1].target,bId);
 });
+
+
+test('AI tactic chooses exactly one of two alternative effects and adds only its printed dice',()=>{
+ let g=chooseCards(createGame('one-ai-tactic','solo','B'),[]);
+ g.fleets.B.hand=g.fleets.B.hand.filter(c=>c.type==='assault'||c.timing!=='tactic');
+ const before=g.fleets.B.dice.length;
+ const chosen=aiStep(g);
+ assert.equal(chosen.phase,'activate');
+ assert.equal(chosen.fleets.B.played.length,1);
+ assert.equal(chosen.fleets.B.played[0].name,'Боевой натиск');
+ assert.equal(chosen.fleets.B.played[0].field,0);
+ assert.equal(chosen.fleets.B.dice.length,before+2,'base +2 attack dice, NOT stronger +4');
+ assert.equal(chosen.fleets.B.burned.length,0,'alternative strong ability was NOT activated');
+ assert.equal(chosen.log.filter(s=>s.includes('карта «Боевой натиск»')).length,1);
+});
+test('AI extra activation is one separate card, then exactly one ship ability on each turn',()=>{
+ let g=start(createGame('ai-extra-turn','solo'));
+ const ship=g.fleets.B.units.find(u=>u.role==='interceptor');
+ g.queue=[{side:'B',id:ship.id,role:ship.role,initiative:7},{side:'A',id:g.fleets.A.units[0].id,role:g.fleets.A.units[0].role,initiative:8}];
+ g.index=0;g.phase='activate';g.fleets.B.dice=[die('a1','attack',3)];
+ const hp=g.fleets.A.units.map(u=>u.hp);
+ const afterCard=aiStep(g);
+ assert.equal(afterCard.fleets.B.played.filter(c=>c.name==='Вторая активация').length,1);
+ assert.equal(afterCard.fleets.B.played.find(c=>c.name==='Вторая активация').field,0);
+ assert.deepEqual(afterCard.fleets.A.units.map(u=>u.hp),hp,'playing a turn card does NOT also fire ship ability');
+ assert.equal(afterCard.queue.filter(q=>q.extra).length,1);
+ const afterFirst=aiStep(afterCard);
+ assert.equal(afterFirst.log.filter(s=>s.includes('применяет ОДНУ способность')).length,1);
+ assert.equal(afterFirst.fleets.B.played.filter(c=>c.name==='Вторая активация').length,1,'card cannot be reused');
+ let afterDefense=afterFirst.phase==='react'?resolveReaction(afterFirst):afterFirst;
+ assert.equal(turnOf(afterDefense)?.side,'B');
+ assert.equal(turnOf(afterDefense)?.extra,true);
+ const afterSecond=aiStep(afterDefense);
+ assert.equal(afterSecond.log.filter(s=>s.includes('применяет ОДНУ способность')).length,2,'two separate ship activations');
+ assert.equal(afterSecond.fleets.B.played.filter(c=>c.name==='Вторая активация').length,1);
+});
+test('real personal shields exactly absorb a 2-damage AI shot; defense dice do not become shields',()=>{
+ let g=start(createGame('shield-versus-dice','solo'));
+ const ship=g.fleets.B.units.find(u=>u.role==='interceptor');
+ const target=g.fleets.A.units.find(u=>u.role==='scout');
+ g.queue=[{side:'B',id:ship.id,role:ship.role,initiative:7},{side:'A',id:target.id,role:target.role,initiative:8}];
+ g.index=0;g.phase='activate';g.fleets.B.dice=[die('gun','attack',3)];
+ g.fleets.B.hand=g.fleets.B.hand.filter(c=>c.timing!=='activation');
+ const startHp=target.hp;
+ target.shield=2;
+ let shot=tryAction(g,{kind:'ability',ability:0,targetId:target.id});
+ assert.equal(shot.hitHistory[0].incoming,2);
+ assert.equal(shot.hitHistory[0].personalBlocked,2);
+ assert.equal(shot.hitHistory[0].damage,0);
+ assert.equal(shot.fleets.A.units.find(u=>u.id===target.id).hp,startHp);
+ assert.equal(shot.fleets.A.units.find(u=>u.id===target.id).shield,0);
+ const noRealShield=start(createGame('defense-dice-are-not-shield'));
+ const scout=noRealShield.fleets.A.units[0];
+ scout.shield=0;
+ noRealShield.fleets.A.dice=[die('d','defense',3)];
+ noRealShield.queue=[{side:'B',id:noRealShield.fleets.B.units.find(u=>u.role==='interceptor').id,role:'interceptor',initiative:7},{side:'A',id:scout.id,role:scout.role,initiative:8}];
+ noRealShield.index=0;noRealShield.phase='activate';noRealShield.fleets.B.dice=[die('gun','attack',3)];noRealShield.fleets.A.hand=[];
+ let hit=tryAction(noRealShield,{kind:'ability',ability:0,targetId:scout.id});
+ assert.equal(hit.hitHistory[0].personalBlocked,0);
+ assert.equal(hit.hitHistory[0].damage,2);
+});
+test('an AI ship never triggers both ability fields in the same activation when both affordable',()=>{
+ let g=start(createGame('ai-strong-only','solo'));
+ const b=g.fleets.B.units.find(u=>u.role==='interceptor'),a=g.fleets.A.units.find(u=>u.role==='scout');
+ g.queue=[{side:'B',id:b.id,role:b.role,initiative:7},{side:'A',id:a.id,role:a.role,initiative:8}];
+ g.index=0;g.phase='activate';g.fleets.B.dice=[die('g1','attack',3),die('g2','attack',3),die('g3','attack',3)];
+ g.fleets.B.hand=g.fleets.B.hand.filter(c=>c.timing!=='activation');
+ const shot=aiStep(g);
+ assert.equal(shot.log.filter(s=>s.includes('применяет ОДНУ способность')).length,1);
+ assert.match(shot.log.join('\n'),/«Подавление»/);
+ assert.doesNotMatch(shot.log.join('\n'),/«Ракетный заход»/);
+ assert.equal(shot.pending?.damage,3);
+});
