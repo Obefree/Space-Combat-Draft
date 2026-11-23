@@ -191,7 +191,10 @@ test("serves the fleet demo at its direct URL", async () => {
   assert.doesNotMatch(opponentHand, /Боевой натиск|Подкрепление|Ускорение флота|Защитная реакция|Вторая активация|ftAbilityField/);
   assert.match(html, /Сыгранные карты противника/);
   assert.match(html, /Общий пул кубов противника/);
-  assert.match(html, /ftAbilityReady/);
+  // In a sealed draft no ship is active: none of its abilities should look selected/ready.
+  assert.doesNotMatch(html, /class="ftAbilityField ftAbilityReady"/);
+  assert.match(html, /ftPhaseGuide/);
+  assert.match(html, /Ваш выбор · одна тактика/);
   assert.doesNotMatch(html, /Полный экран/);
   assert.doesNotMatch(html, /за выживание|назначь исполнителей|КОМАНДНЫЕ КАРТЫ/);
   assert.match(html, /href="\/"/);
